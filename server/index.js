@@ -6,7 +6,6 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const destinationRoutes = require('./routes/destinations');
-const hotelRoutes = require('./routes/hotels');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -35,7 +34,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/destinations', destinationRoutes);
-app.use('/api/hotels', hotelRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
