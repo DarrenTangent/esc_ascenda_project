@@ -32,11 +32,8 @@ GET /api/destinations/search?q=sing&limit=5
 {
   "destinations": [
     {
-      "id": "SG",
-      "name": "Singapore",
-      "country": "Singapore",
-      "type": "city",
-      "popularity": 100,
+      "uid": "WG9E",
+      "term": "Singapore",
       "relevanceScore": 0.1
     }
   ],
@@ -45,35 +42,9 @@ GET /api/destinations/search?q=sing&limit=5
 }
 ```
 
-#### GET /api/destinations/popular
-Get popular destinations.
-
-**Query Parameters:**
-- `limit` (optional): Number of results to return (default: 20, max: 100)
-
 #### GET /api/destinations/:id
 Get destination details by ID.
 
-### Hotels
-
-#### GET /api/hotels/search
-Search for hotels.
-
-**Query Parameters:**
-- `destination_id` (required): Destination ID
-- `checkin` (required): Check-in date (YYYY-MM-DD)
-- `checkout` (required): Check-out date (YYYY-MM-DD)
-- `guests` (optional): Number of guests (default: 2, max: 20)
-- `rooms` (optional): Number of rooms (default: 1, max: 10)
-- `limit` (optional): Number of results to return (default: 20, max: 100)
-
-**Example:**
-```
-GET /api/hotels/search?destination_id=SG&checkin=2025-08-01&checkout=2025-08-03&guests=2&rooms=1
-```
-
-#### GET /api/hotels/:id
-Get hotel details by ID.
 
 ### Health Check
 
@@ -123,9 +94,8 @@ PORT=5000
 CLIENT_URL=http://localhost:3000
 
 # API Keys (add your actual API keys)
-ASCENDA_API_KEY=your_ascenda_api_key_here
-AMADEUS_API_KEY=your_amadeus_api_key_here
-AMADEUS_API_SECRET=your_amadeus_api_secret_here
+ASCENDA_API_KEY=hotelapi.loyalty.dev
+
 ```
 
 ## Project Structure
@@ -160,11 +130,6 @@ server/
 ## Integration with External APIs
 
 The server is designed to integrate with external APIs like Ascenda's hotel booking API. Currently using mock data, but the structure is in place to easily integrate real APIs by updating the service files.
-
-To integrate with real APIs:
-1. Add your API keys to the `.env` file
-2. Update the service files (`destinationService.js` and `hotelService.js`) to make actual API calls
-3. Implement proper error handling for external API failures
 
 ## Testing
 
