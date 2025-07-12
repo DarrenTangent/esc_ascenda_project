@@ -18,7 +18,7 @@ export default function DestinationSearch() {
       const fetchDestinations = async () => {
         setLoading(true);
         try {
-          const response = await fetch(`http://localhost:5000/api/destinations/search?q=${query}`);
+          const response = await fetch(`http://localhost:5001/api/destinations/search?q=${query}`);
           if (!response.ok) {
             throw new Error('Network response was not ok');
           }
@@ -34,7 +34,7 @@ export default function DestinationSearch() {
 
       const debounceTimeout = setTimeout(() => {
         fetchDestinations();
-      }, 300);
+      }, 300); // 300ms debounce delay
 
       return () => clearTimeout(debounceTimeout);
     } else {
@@ -53,15 +53,15 @@ export default function DestinationSearch() {
         value={query}
         onChange={handleInputChange}
         placeholder="Search for a destination..."
-        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-black placeholder-gray-400"
+        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
       />
-      {loading && <p className="absolute mt-1 w-full text-sm text-gray-500">Loading...</p>}
+      {loading && <p className="absolute mt-1 w-full">Loading...</p>}
       {results.length > 0 && (
         <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
           {results.map((destination) => (
             <li
               key={destination.uid}
-              className="px-4 py-2 cursor-pointer hover:bg-gray-100 text-black"
+              className="px-4 py-2 cursor-pointer hover:bg-gray-100"
               onClick={() => {
                 setQuery(destination.term);
                 setResults([]);
