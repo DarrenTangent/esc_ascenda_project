@@ -34,9 +34,7 @@ class DestinationService {
       // If fuzzy search doesn't return enough results, try exact matches
       if (results.length < limit) {
         const exactMatches = this.destinations.filter(dest => 
-          dest.name.toLowerCase().includes(query.toLowerCase()) ||
-          dest.country.toLowerCase().includes(query.toLowerCase()) ||
-          dest.term.toLowerCase().includes(query.toLowerCase())
+          dest.term && dest.term.toLowerCase().includes(query.toLowerCase())
         ).slice(0, limit - results.length);
         
         // Add exact matches that aren't already in fuzzy results
@@ -48,33 +46,25 @@ class DestinationService {
         });
       }
 
-      // Sort by score (lower is better) and popularity
-      return results
-        .sort((a, b) => {
-          if (a.score !== b.score) {
-            return a.score - b.score;
-          }
-          return b.item.popularity - a.item.popularity;
-        })
-        .slice(0, limit)
+      const processedResults = results
+        .sort((a, b) => a.score - b.score)
         .map(result => ({
           ...result.item,
           relevanceScore: result.score
         }));
+
+      // Ensure uniqueness of results based on uid
+      const seen = new Set();
+      const filteredResults = processedResults.filter(el => {
+        const duplicate = seen.has(el.uid);
+        seen.add(el.uid);
+        return !duplicate;
+      });
+
+      return filteredResults.slice(0, limit);
     } catch (error) {
       console.error('Error searching destinations:', error);
       throw new Error('Failed to search destinations');
-    }
-  }
-
-  async getPopularDestinations(limit = 20) {
-    try {
-      return this.destinations
-        .sort((a, b) => b.popularity - a.popularity)
-        .slice(0, limit);
-    } catch (error) {
-      console.error('Error getting popular destinations:', error);
-      throw new Error('Failed to get popular destinations');
     }
   }
 
@@ -84,24 +74,6 @@ class DestinationService {
     } catch (error) {
       console.error('Error getting destination by ID:', error);
       throw new Error('Failed to get destination');
-    }
-  }
-
-  // Method to integrate with external APIs (implement as needed)
-  async fetchFromExternalAPI(query) {
-    try {
-      // Example API integration - replace with actual API calls
-      // const response = await axios.get(`${process.env.DESTINATION_API_URL}/search`, {
-      //   params: { q: query },
-      //   headers: { 'Authorization': `Bearer ${process.env.API_KEY}` }
-      // });
-      // return response.data;
-      
-      // For now, return empty array as we're using mock data
-      return [];
-    } catch (error) {
-      console.error('External API error:', error);
-      return [];
     }
   }
 }
