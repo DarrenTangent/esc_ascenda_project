@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import HotelResultCard from './HotelResultCard';
 import { useSearchParams, useRouter } from 'next/navigation';
+import HotelSearchInputFilter from './HotelSearchInputFilter';
 
 // TODO: HANDLE NO DATA FOR QUERY
 const Results = () => {
@@ -83,27 +84,33 @@ const Results = () => {
     if (!paginatedHotels && !page && !totalPages) return (<div>LOADING...</div>);
 
     return (
-        <div className='flex justify-center items-center flex-col my-4'>
-            <form onSubmit={handleFilterSubmit} className='flex gap-2 mb-2'>
-                <input name='minCost' type='number' min="0" max="99999" className='bg-white text-black rounded-xl w-30 placeholder:px-2 h-7' placeholder='Min Cost'/>
-                <input name='maxCost' type='number' min="0" max="99999" className='bg-white text-black rounded-xl w-30 placeholder:px-2 h-7' placeholder='Max Cost'/>
-                <button type='submit' className='rounded-3xl bg-white text-black px-5'>Filter</button>
-            </form>
-            <div className='grid grid-cols-3 lg:w-[60%]'>
-                {paginatedHotels.map((hotel: any) => (<HotelResultCard price={hotel.price} roomsAvailable={hotel.rooms_available} marketRates={hotel.market_rates} id={hotel.id} searchRank={hotel.searchRank} key={hotel.id} />))}
-            </div>
-            <div className='flex gap-4 mt-4 justify-center items-center'>
-                {page! > 1 && (
-                    <a onClick={e => handlePageSubmit(e, "d")} className="bg-white text-black px-3 py-1 rounded-xl">
-                        ←
-                    </a>
-                )}
-                <span className="">Page {page} of {totalPages}</span>
-                {page! < totalPages && (
-                    <a onClick={e => handlePageSubmit(e, "i")} className="bg-white text-black px-3 py-1 rounded-xl">
-                        →
-                    </a>
-                )}
+        <div className='overflow-x-hidden'>
+            <div className='w-screen flex justify-center bg-gray-50 text-black'>
+                <div className='my-4 w-[70%]'>
+                    <form onSubmit={handleFilterSubmit} className='gap-2 mb-2'>
+                        <HotelSearchInputFilter name='minCost' type='number' placeholder='Min Cost'/>
+                        <HotelSearchInputFilter name='maxCost' type='number' placeholder='Max Cost'/>
+                        <button type='submit' className='rounded-3xl text-black px-5 border-gray-500 border-2 hover:cursor-pointer hover:bg-gray-100 transition-all'>Filter</button>
+                    </form>
+                    <div className='flex justify items-center flex-col w-[100%]'>
+                        <div className='grid grid-cols-3 w-[100%]'>
+                            {paginatedHotels.map((hotel: any) => (<HotelResultCard price={hotel.price} roomsAvailable={hotel.rooms_available} marketRates={hotel.market_rates} id={hotel.id} searchRank={hotel.searchRank} key={hotel.id} />))}
+                        </div>
+                    </div>
+                    <div className='flex gap-4 mt-4 justify-center items-center'>
+                        {page! > 1 && (
+                            <a onClick={e => handlePageSubmit(e, "d")} className="bg-white text-black px-3 py-1 rounded-xl cursor-pointer border-1 border-gray-500 hover:bg-gray-100 transition-all">
+                                ←
+                            </a>
+                        )}
+                        <span className="">Page {page} of {totalPages}</span>
+                        {page! < totalPages && (
+                            <a onClick={e => handlePageSubmit(e, "i")} className="bg-white text-black px-3 py-1 rounded-xl cursor-pointer border-1 border-gray-500 hover:bg-gray-100 transition-all">
+                                →
+                            </a>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     )
