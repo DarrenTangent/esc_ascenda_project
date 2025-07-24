@@ -23,7 +23,7 @@ class HotelService {
 
         const hotelPrices = await this.getHotelPrices(destination, checkin, checkout, guests);
         const hotelDetails = await this.getHotelDetails(destination);
-        const hotelCombined = this.getHotelCombined(hotelPrices, hotelDetails);
+        let hotelCombined = this.getHotelCombined(hotelPrices, hotelDetails);
 
         // filtering
         if (minCost != null) hotelCombined = hotelCombined.filter(hotel => minCost <= hotel.price);
