@@ -92,9 +92,9 @@ const Results = () => {
                         <HotelSearchInputFilter name='maxCost' type='number' placeholder='Max Cost'/>
                         <button type='submit' className='rounded-3xl text-black px-5 border-gray-500 border-2 hover:cursor-pointer hover:bg-gray-100 transition-all'>Filter</button>
                     </form>
-                    <div className='flex justify items-center flex-col w-[100%]'>
-                        <div className='grid grid-cols-3 w-[100%]'>
-                            {paginatedHotels.map((hotel: any) => (<HotelResultCard price={hotel.price} roomsAvailable={hotel.rooms_available} id={hotel.id} searchRank={hotel.searchRank} key={hotel.id} />))}
+                    <div>
+                        <div className='grid grid-cols-3 w-[100%] gap-x-5'>
+                            {paginatedHotels.map((hotel: any) => (<HotelResultCard hotel={hotel} />))}
                         </div>
                     </div>
                     <div className='flex gap-4 mt-4 justify-center items-center'>
