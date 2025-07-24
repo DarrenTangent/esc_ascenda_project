@@ -45,7 +45,6 @@ const Results = () => {
         }
         setPage(newPage);
         
-        console.log("PAGE", newPage);
         const newSearchParams = new URLSearchParams(searchParams);
         newSearchParams.set("page", newPage!.toString());
         router.push(`${baseUrl}?${newSearchParams.toString()}`);
@@ -58,6 +57,7 @@ const Results = () => {
 
             const data = await response.json();
             setPaginatedHotels(data.paginatedHotels);
+            // handle if old page value is more than new totalpages
             if (data.page > data.totalPages) {
                 setPage(data.totalPages);
                 newSearchParams.set("page", data.totalPages);
@@ -69,6 +69,7 @@ const Results = () => {
             else {
                 setPage(data.page);
             }
+            console.log(data.paginatedHotels);
             setTotalPages(data.totalPages);
         } 
         catch (error) {
@@ -77,7 +78,6 @@ const Results = () => {
     };
 
     useEffect(() => {
-        console.log("ORIGINAL PARAMS", searchParams.toString());
         getData(new URLSearchParams(searchParams));
     }, []);
 
@@ -94,7 +94,7 @@ const Results = () => {
                     </form>
                     <div className='flex justify items-center flex-col w-[100%]'>
                         <div className='grid grid-cols-3 w-[100%]'>
-                            {paginatedHotels.map((hotel: any) => (<HotelResultCard price={hotel.price} roomsAvailable={hotel.rooms_available} marketRates={hotel.market_rates} id={hotel.id} searchRank={hotel.searchRank} key={hotel.id} />))}
+                            {paginatedHotels.map((hotel: any) => (<HotelResultCard price={hotel.price} roomsAvailable={hotel.rooms_available} id={hotel.id} searchRank={hotel.searchRank} key={hotel.id} />))}
                         </div>
                     </div>
                     <div className='flex gap-4 mt-4 justify-center items-center'>
