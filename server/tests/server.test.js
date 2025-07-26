@@ -44,11 +44,12 @@ describe('Destination Search API', () => {
 describe('Hotel Search API', () => {
   test('GET /api/hotels/search should return hotels', async () => {
     const response = await request(app)
-      .get('/api/hotels/search?destination_id=SG&checkin=2025-08-01&checkout=2025-08-03')
+      .get('/api/hotels/search?destination_id=SG&checkin=2025-08-01&checkout=2025-08-03&guests=2')
       .expect(200);
     
-    expect(response.body.hotels).toBeDefined();
-    expect(Array.isArray(response.body.hotels)).toBe(true);
+    console.log(response.body);
+    expect(response.body.paginatedHotels).toBeDefined();
+    expect(Array.isArray(response.body.paginatedHotels)).toBe(true);
   });
 
   test('GET /api/hotels/search should return 400 for missing destination_id', async () => {
