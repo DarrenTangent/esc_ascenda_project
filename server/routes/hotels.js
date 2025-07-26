@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const hotelService = require('../services/hotelService');
+const { validateHotelSearch } = require('../middleware/validation');
 
 // GET /api/hotels/search
-router.get('/search', async (req, res) => {
+router.get('/search', validateHotelSearch, async (req, res) => {
     try {
         data = await hotelService.getHotels(req);
         console.log(data);
