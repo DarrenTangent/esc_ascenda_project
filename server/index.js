@@ -7,8 +7,11 @@ require('dotenv').config();
 
 const destinationRoutes = require('./routes/destinations');
 
+const mongoose = require('mongoose');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+
 
 // Security middleware
 app.use(helmet());
@@ -32,7 +35,18 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+//  MongoDB Connection
+mongoose.connect('mongodb://localhost:27017/hotel-booking', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => console.log('MongoDB connected'))
+  .catch(err => console.error(err));
+
 // Routes
+const bookingsRoute = require('./routes/bookings');
+app.use('/api/bookings', bookingsRoute);
+
+
 app.use('/api/destinations', destinationRoutes);
 
 // Health check endpoint
@@ -58,5 +72,11 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+
+
+
+
+
 
 module.exports = app;
