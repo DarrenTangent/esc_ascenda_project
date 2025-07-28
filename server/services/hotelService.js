@@ -35,29 +35,64 @@ class HotelService {
         return {"page": page, "totalPages": totalPages, "paginatedHotels": paginatedHotels};
     }
 
-    getHotelCombined(hotelPrices, hotelDetails) {
-        const hotelCombined = [];
-        for (const hotel of hotelPrices) {
-            const hotelDetail = hotelDetails.find(hotelDetail => hotelDetail.id === hotel.id);
-            if (hotelDetail) {
-                hotelCombined.push({
-                    "id": hotel.id,
-                    "searchRank": hotel.searchRank,
-                    "free_cancellation": hotel.free_cancellation,
-                    "rooms_available": hotel.rooms_available,
-                    "price": hotel.price,
-                    "latitude": hotelDetail.latitude,
-                    "longitude": hotelDetail.longitude,
-                    "name": hotelDetail.name,
-                    "address": hotelDetail.address,
-                    "rating": hotelDetail.rating,
-                    "amenities_ratings": hotelDetail.amenities_ratings,
-                    "description": hotelDetail.description,
-                    "amenities": hotelDetail.amenities,
-                    "image_details": hotelDetail.image_details,
-                    "hires_image_index": hotelDetail.hires_image_index
-                });
-            }            
+    async getSingleHotelDetails(req, id) {
+        const destination = req.query.destination_id;
+        const checkin = req.query.checkin;
+        const checkout = req.query.checkout;
+        const guests = req.query.guests;
+        let fullHotelDetails = {};
+
+        const roomDetailsUrl = `https://hotelapi.loyalty.dev/api/hotels/${id}/price?destination_id=${destination}&checkin=${checkin}&checkout=${checkout}&currency=SGD&country_code=SG&guests=${guests}&partner_id=1`
+        const hotelDetailsUrl = `https://hotelapi.loyalty.dev/api/hotels/${id}`
+
+        const cachedData = this.myCache.get(id);
+        if (cachedData) {
+            fullHotelDetails = cachedData;
+        }
+        else {
+            const rawRoomDetails = await fetch(roomDetailsUrl);
+            const roomDetails = await rawRoomDetails.json();
+
+            const rawHotelDetails = await fetch(hotelDetailsUrl);
+            const hotelDetails = await rawHotelDetails.json();
+
+            fullHotelDetails.rooms = roomDetails.rooms;
+            fullHotelDetails.hotelDetails = hotelDetails;
+
+            this.myCache.set(id, fullHotelDetails);
+        }
+        return fullHotelDetails;
+    }
+
+    getHotelCombined(query, hotelPrices, hotelDetails) {
+        let hotelCombined = [];
+        const cachedData = this.myCache.get(query);
+        if (cachedData) {
+            hotelCombined = cachedData;
+        }
+        else {
+            for (const hotel of hotelPrices) {
+                const hotelDetail = hotelDetails.find(hotelDetail => hotelDetail.id === hotel.id);
+                if (hotelDetail) {
+                    hotelCombined.push({
+                        "id": hotel.id,
+                        "searchRank": hotel.searchRank,
+                        "free_cancellation": hotel.free_cancellation,
+                        "rooms_available": hotel.rooms_available,
+                        "price": hotel.price,
+                        "latitude": hotelDetail.latitude,
+                        "longitude": hotelDetail.longitude,
+                        "name": hotelDetail.name,
+                        "address": hotelDetail.address,
+                        "rating": hotelDetail.rating,
+                        "amenities_ratings": hotelDetail.amenities_ratings,
+                        "description": hotelDetail.description,
+                        "amenities": hotelDetail.amenities,
+                        "image_details": hotelDetail.image_details,
+                        "hires_image_index": hotelDetail.hires_image_index
+                    });
+                }            
+            }
         }
         return hotelCombined;
     }
