@@ -67,6 +67,18 @@ describe('Hotel Search API', () => {
     
     expect(response.body.error).toBe('Check-out date must be after check-in date');
   });
+
+  test('GET /api/hotels/search should return filtered results if there is a filter', async() => {
+    const res = await request(app)
+      .get('/api/hotels/search?destination_id=SG&checkin=2025-08-05&checkout=2025-08-09&guests=2&minCost=&maxCost=1500')
+      .expect(200);
+      
+    expect(res.body.paginatedHotels).toBeDefined();
+    expect(Array.isArray(res.body.paginatedHotels)).toBe(true);
+    for (hotel of res.body.paginatedHotels) {
+        expect(hotel.price).toBeLessThanOrEqual(1500);
+    }
+  })
 });
 
 describe('Error Handling', () => {

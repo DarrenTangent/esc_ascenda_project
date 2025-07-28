@@ -11,7 +11,7 @@ const Results = () => {
     const [page, setPage] = useState<number>();
     const [totalPages, setTotalPages] = useState<any>(null);
 
-    const apiUrl = "http://localhost:5000/api/hotels/search"
+    const apiUrl = "http://localhost:5001/api/hotels/search"
     const baseUrl = "http://localhost:3000/search"
 
     const router = useRouter();
