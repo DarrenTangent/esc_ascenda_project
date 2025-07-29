@@ -12,7 +12,7 @@ const HotelResultCard: React.FC<HotelResultCardProps> = ({ hotel }) => {
     const router = useRouter();
 
     const viewDetailedPage = () => {
-        router.push(`/hotel?${searchParams.toString()}`);
+        router.push(`/hotel?id=${hotel.id}&${searchParams.toString()}`);
     }
 
     const stars = () => {

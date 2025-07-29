@@ -59,6 +59,8 @@ class HotelService {
             fullHotelDetails.rooms = roomDetails.rooms;
             fullHotelDetails.hotelDetails = hotelDetails;
 
+            console.log(fullHotelDetails);
+
             this.myCache.set(id, fullHotelDetails);
         }
         return fullHotelDetails;

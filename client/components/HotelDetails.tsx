@@ -1,26 +1,55 @@
 'use client'
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 const HotelDetails = () => {
     const [showAllPhotos, setShowAllPhotos] = useState(false);
+    const [details, setDetails] = useState<any>();
+    const [rooms, setRooms] = useState<any[]>();
+    const [images, setImages] = useState<any[]>();
+    const [amenities, setAmenities] = useState<any[]>();
 
-    const images = [
-        "https://i.pinimg.com/736x/77/0f/8d/770f8deb94ce00c789bab487c189f476.jpg",
-        "https://static1.srcdn.com/wordpress/wp-content/uploads/2019/09/SpongeBob-SquarePants-And-Nuclear-Bomb.jpg",
-        "https://easydrawingguides.com/wp-content/uploads/2017/03/how-to-draw-a-fish-featured-image-1200.png",
-        "https://www.kikkoman.eu/fileadmin/_processed_/4/2/csm_sushi-kakkoii_2c56fe3133.webp",
-        "https://i.pinimg.com/564x/9a/21/53/9a2153e4ad1c3.jpg",
-        "https://i.pinimg.com/564x/7c/fd/3c/7cfd3c86f823.jpg"
-    ];
+    const searchParams = useSearchParams();
 
-    const rooms = [
-        { id: 1, type: "Standard Room", price: "$120/night", guests: "2 guests" },
-        { id: 2, type: "Deluxe Suite", price: "$200/night", guests: "3 guests" },
-        { id: 3, type: "Ocean View Suite", price: "$350/night", guests: "4 guests" },
-    ];
+    // const rooms = [
+    //     { id: 1, type: "Standard Room", price: "$120/night", guests: "2 guests" },
+    //     { id: 2, type: "Deluxe Suite", price: "$200/night", guests: "3 guests" },
+    //     { id: 3, type: "Ocean View Suite", price: "$350/night", guests: "4 guests" },
+    // ];
 
-    const visibleImages = showAllPhotos ? images : images.slice(0, 3);
+    const getData = async () => {
+        try {
+            // TODO: move url out maybe to a config file
+            const response = await fetch(`http://localhost:5001/api/hotels/${searchParams.get("id")}?destination_id=${searchParams.get("destination_id")}&checkin=${searchParams.get("checkin")}&checkout=${searchParams.get("checkout")}&guests=${searchParams.get("guests")}`);
+
+            const data = await response.json();
+            console.log(data);
+            setDetails(data.hotelDetails);
+            setRooms(data.rooms);
+
+            const tempImgs = [];
+            for (let i = 0; i < 10; i++) {
+                tempImgs.push(`${data.hotelDetails.image_details.prefix}${i}${data.hotelDetails.image_details.suffix}`);
+            }
+            setImages(tempImgs);
+            
+            const ams: String[] = [];
+            for (const key in data.hotelDetails.amenities) {
+                ams.push(key);
+            }
+            setAmenities(ams);
+        } 
+        catch (error) {
+            console.error("Failed to fetch hotel details:", error);
+        }
+    };
+
+    useEffect(() => {
+        getData();
+    }, []);
+
+    if (!details || !images || !amenities || !rooms) return (<div>LOADING...</div>);
 
     return (
         <div className="bg-slate-50 text-gray-800 min-h-screen">
@@ -32,7 +61,7 @@ const HotelDetails = () => {
                 className="text-5xl font-bold tracking-tight text-slate-900"
                 style={{ fontFamily: '"Playfair Display", serif' }}
             >
-                Bikini Bottoms Hotel
+                {details.name}
             </h1>
             <div className="flex items-center gap-3 mt-3">
                 <span className="text-yellow-500 text-xl font-semibold">★ 4.5</span>
@@ -40,7 +69,7 @@ const HotelDetails = () => {
                 className="text-slate-600 text-lg"
                 style={{ fontFamily: '"Poppins", sans-serif' }}
                 >
-                Grandfather's Rd, 137 Longkang Dr
+                {details.address}
                 </span>
             </div>
             </header>
@@ -112,9 +141,7 @@ const HotelDetails = () => {
                 className="text-lg leading-relaxed text-gray-700"
                 style={{ fontFamily: '"Poppins", sans-serif' }}
             >
-                Welcome to Bikini Bottoms Hotel, a modern ocean-inspired stay with
-                stunning interiors and cozy rooms. Experience beach vibes, fine
-                dining, and world-class hospitality designed for relaxation.
+                {details.description}
             </p>
             </section>
 
@@ -127,14 +154,7 @@ const HotelDetails = () => {
                 Amenities
             </h2>
             <ul className="grid grid-cols-2 sm:grid-cols-3 gap-5">
-                {[
-                "Free Wi-Fi",
-                "Outdoor Pool",
-                "Spa & Sauna",
-                "Concierge Service",
-                "Private Parking",
-                "Fitness Center",
-                ].map((item, index) => (
+                {amenities.map((item, index) => (
                 <li
                     key={index}
                     className="bg-white border border-slate-100 rounded-lg p-4 text-slate-700 hover:shadow-md transition"
@@ -157,20 +177,20 @@ const HotelDetails = () => {
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 {rooms.map((room) => (
                 <div
-                    key={room.id}
+                    key={room.key}
                     className="bg-white border border-slate-100 rounded-2xl p-6 shadow hover:shadow-lg transition transform hover:-translate-y-1"
                 >
                     <h3
                     className="text-xl font-bold mb-1 text-slate-900"
                     style={{ fontFamily: '"Playfair Display", serif' }}
                     >
-                    {room.type}
+                    {room.roomDescription}
                     </h3>
                     <p
                     className="text-slate-500"
                     style={{ fontFamily: '"Poppins", sans-serif' }}
                     >
-                    {room.guests}
+                    {`${room.rooms_available} rooms available`}
                     </p>
                     <p
                     className="mt-3 font-semibold text-sky-700"
