@@ -1,18 +1,26 @@
 'use client';
 
 import React from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface HotelResultCardProps {
     hotel: any;
 }
 
 const HotelResultCard: React.FC<HotelResultCardProps> = ({ hotel }) => {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    const viewDetailedPage = () => {
+        router.push(`/hotel?${searchParams.toString()}`);
+    }
+
     const stars = () => {
         return "⭐".repeat(Number(hotel.rating));
     }
 
     return (
-        <div className='p-2 m-2 rounded-xl border-2 border-gray-200 bg-gray-100 hover:scale-110 transition-all cursor-pointer overflow-hidden'>
+        <div className='p-2 m-2 rounded-xl border-2 border-gray-200 bg-gray-100 hover:scale-110 transition-all cursor-pointer overflow-hidden' onClick={viewDetailedPage}>
             <img src={`${hotel.image_details.prefix}0${hotel.image_details.suffix}`} className='w-full h-60 object-cover mb-2'/>
             <div className='flex justify-between'>
                 <div>

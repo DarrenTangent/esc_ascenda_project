@@ -64,7 +64,8 @@ class HotelService {
         return fullHotelDetails;
     }
 
-    getHotelCombined(query, hotelPrices, hotelDetails) {
+    getHotelCombined(hotelPrices, hotelDetails) {
+        const query = `${hotelPrices.toString()} ${hotelDetails.toString()}`
         let hotelCombined = [];
         const cachedData = this.myCache.get(query);
         if (cachedData) {
