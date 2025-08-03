@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -26,3 +27,9 @@
     font-family: Arial, Helvetica, sans-serif;
     }
 }
+
+.slick-prev:before, .slick-next:before {
+  color: black !important;
+}
+
+
