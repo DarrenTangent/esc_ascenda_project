@@ -6,7 +6,7 @@ const BookingSchema = new mongoose.Schema({
   email: String,
   phone: String,
   specialRequests: String,
-  cardNumber: String,       // ⚠️ Don't store this in production (use Stripe)
+  cardNumber: String,       //  Don't store this in production (use Stripe)
   expiry: String,
   cvv: String,
   billingAddress: String,

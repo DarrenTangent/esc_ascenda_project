@@ -12,4 +12,17 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.get('/:id', async(req,res) => {
+  try{
+    const booking = await Booking.findById(req.params.id);
+    if(!booking){
+      return res.status(404).json({error: 'Booking not found'});
+    } 
+    res.json(booking);
+  }
+  catch (err){
+    res.status(500).json({error: 'Server error, please try again later'});
+  }
+});
+
 module.exports = router;
