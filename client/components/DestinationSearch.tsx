@@ -1,7 +1,8 @@
+// components/DestinationSearch.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { ChangeEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { DateRangePicker } from 'rsuite';
 import 'rsuite/dist/rsuite.min.css';
 
@@ -13,107 +14,136 @@ interface Destination {
 export default function DestinationSearch() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Destination[]>([]);
+  const [selectedDest, setSelectedDest] = useState<Destination | null>(null);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[Date, Date] | null>(null);
+  const [guests, setGuests] = useState(2);
+  const [rooms, setRooms] = useState(1);
+  const router = useRouter();
 
   useEffect(() => {
     if (query.length > 1) {
-      const fetchDestinations = async () => {
+      const t = setTimeout(async () => {
         setLoading(true);
         try {
-          const response = await fetch(`http://localhost:5001/api/destinations/search?q=${query}`);
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          const data = await response.json();
+          const res = await fetch(
+            `http://localhost:5001/api/destinations/search?q=${encodeURIComponent(query)}`
+          );
+          if (!res.ok) throw new Error();
+          const data = await res.json();
           setResults(data.destinations);
-        } catch (error) {
-          console.error("Failed to fetch destinations:", error);
+        } catch {
           setResults([]);
         } finally {
           setLoading(false);
         }
-      };
-
-      const debounceTimeout = setTimeout(() => {
-        fetchDestinations();
       }, 300);
-
-      return () => clearTimeout(debounceTimeout);
+      return () => clearTimeout(t);
     } else {
       setResults([]);
     }
   }, [query]);
 
-  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setQuery(event.target.value);
-  };
-
   const handleSearch = () => {
-    if (!query || !dateRange) {
-      alert('Please enter a destination and select a date range.');
+    if (!selectedDest || !dateRange) {
+      alert('Please select destination & dates');
       return;
     }
-
-    console.log('Searching:', {
-      destination: query,
-      checkIn: dateRange[0],
-      checkOut: dateRange[1],
-    });
+    const [checkin, checkout] = dateRange.map(d => d.toISOString().slice(0,10));
+    const guestsParam = Array(rooms).fill(guests).join('|');
+    router.push(
+      `/search?destination_id=${selectedDest.uid}` +
+      `&checkin=${checkin}` +
+      `&checkout=${checkout}` +
+      `&guests=${guestsParam}&rooms=${rooms}`
+    );
   };
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-6">
-      {/* Destination input + dropdown */}
-      <div className="relative">
-        <input
-          type="text"
-          value={query}
-          onChange={handleInputChange}
-          placeholder="Search for a destination..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-400 focus:border-indigo-400 text-black placeholder-gray-400"
-        />
+    <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-lg mx-auto">
+      <div className="grid grid-cols-1 gap-4">
+        {/* Destination */}
+        <div className="relative">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
+          <input
+            type="text"
+            value={query}
+            onChange={e => { setQuery(e.target.value); setSelectedDest(null); }}
+            placeholder="Where are you going?"
+            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          {loading && <p className="absolute right-4 top-10 text-sm text-gray-500">…</p>}
+          {results.length > 0 && (
+            <ul className="absolute z-20 w-full bg-white border border-gray-200 rounded-lg mt-1 max-h-48 overflow-auto shadow">
+              {results.map(d => (
+                <li
+                  key={d.uid}
+                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  onClick={() => {
+                    setQuery(d.term);
+                    setSelectedDest(d);
+                    setResults([]);
+                  }}
+                >
+                  {d.term}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
-        {loading && <p className="absolute mt-1 text-sm text-gray-500">Loading...</p>}
+        {/* Dates */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Travel Dates</label>
+          <DateRangePicker
+            value={dateRange}
+            onChange={val => setDateRange(val as [Date, Date])}
+            placeholder="Select check-in & check-out"
+            style={{ width: '100%' }}
+            showOneCalendar
+            shouldDisableDate={date => date < new Date()}
+            className="border rounded-lg"
+          />
+        </div>
 
-        {results.length > 0 && (
-          <ul className="absolute left-0 right-0 z-10 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-64 overflow-auto">
-            {results.map((destination) => (
-              <li
-                key={destination.uid}
-                className="px-4 py-2 cursor-pointer hover:bg-gray-100 text-black"
-                onClick={() => {
-                  setQuery(destination.term);
-                  setResults([]);
-                }}
-              >
-                {destination.term}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+        {/* Guests & Rooms */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Guests</label>
+            <select
+              value={guests}
+              onChange={e => setGuests(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {[1,2,3,4,5].map(n => (
+                <option key={n} value={n}>
+                  {n} pax
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rooms</label>
+            <select
+              value={rooms}
+              onChange={e => setRooms(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {[1,2,3,4].map(n => (
+                <option key={n} value={n}>
+                  {n} room{n > 1 ? 's' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-      {/* Date Range Picker with one calendar and two-tap flow */}
-      <div>
-        <label className="block mb-1 text-sm text-gray-700 font-medium">Travel Dates</label>
-        <DateRangePicker
-          value={dateRange}
-          onChange={(value) => setDateRange(value as [Date, Date])}
-          placeholder="Select check-in and check-out"
-          style={{ width: '100%' }}
-          showOneCalendar
-          shouldDisableDate={(date) => date < new Date()}
-        />
-      </div>
-
-      {/* Search button */}
-      <div className="flex justify-end">
+        {/* Search */}
         <button
           onClick={handleSearch}
-          className="px-4 py-1.5 text-sm bg-indigo-100 text-indigo-700 rounded-md border border-indigo-300 hover:bg-indigo-200 transition"
+          className="w-full py-3 mt-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition"
         >
-          Search
+          Search Hotels
         </button>
       </div>
     </div>

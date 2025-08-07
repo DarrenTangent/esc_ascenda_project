@@ -1,119 +1,69 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import HotelResultCard from './HotelResultCard';
 import { useSearchParams, useRouter } from 'next/navigation';
-import HotelSearchInputFilter from './HotelSearchInputFilter';
+import HotelResultCard from './HotelResultCard';
 
-// TODO: HANDLE NO DATA FOR QUERY
-const Results = () => {
-    const [paginatedHotels, setPaginatedHotels] = useState<any>(null);
-    const [page, setPage] = useState<number>();
-    const [totalPages, setTotalPages] = useState<any>(null);
+export default function HotelSearchResults() {
+  const params = useSearchParams();
+  const router = useRouter();
 
-    const apiUrl = "http://localhost:5001/api/hotels/search"
-    const baseUrl = "http://localhost:3000/search"
+  const [hotels, setHotels] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    const router = useRouter();
-    const searchParams = useSearchParams();
-
-    const handleFilterSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const filters = ["minCost", "maxCost"];
-        const newSearchParams = new URLSearchParams(searchParams);
-
-        for (const filter of filters) {
-            if (formData.has(filter)) {
-                newSearchParams.set(filter, formData.get(filter)!.toString());
-            }
-        }
-
-        console.log("NEW PARAMS", newSearchParams.toString());
-        router.push(`${baseUrl}?${newSearchParams.toString()}`);
-        getData(newSearchParams);
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `http://localhost:5001/api/hotels/search?${params.toString()}`
+        );
+        const data = await res.json();
+        setHotels(Array.isArray(data.paginatedHotels) ? data.paginatedHotels : []);
+      } catch (err) {
+        console.error('Fetch error', err);
+        setHotels([]);
+      } finally {
+        setLoading(false);
+      }
     }
+    fetchData();
+  }, [params]);
 
-    const handlePageSubmit = (event: any, operation: String) => {
-        event.preventDefault();
-        let newPage = page;
-        if (page! > 1 && operation === "d") {
-            newPage!--;
-        }
-        else if (page! < totalPages && operation === "i") {
-            newPage!++;
-        }
-        setPage(newPage);
-        
-        const newSearchParams = new URLSearchParams(searchParams);
-        newSearchParams.set("page", newPage!.toString());
-        router.push(`${baseUrl}?${newSearchParams.toString()}`);
-        getData(newSearchParams);
-    }
-
-    const getData = async (newSearchParams: URLSearchParams) => {
-        try {
-            const response = await fetch(`${apiUrl}?${newSearchParams.toString()}`);
-
-            const data = await response.json();
-            setPaginatedHotels(data.paginatedHotels);
-            // handle if old page value is more than new totalpages
-            if (data.page > data.totalPages) {
-                setPage(data.totalPages);
-                newSearchParams.set("page", data.totalPages);
-                router.push(`${baseUrl}?${newSearchParams.toString()}`);
-                const newRes = await fetch(`${apiUrl}?${newSearchParams.toString()}`);
-                const newData = await newRes.json();
-                setPaginatedHotels(newData.paginatedHotels);
-            }
-            else {
-                setPage(data.page);
-            }
-            console.log(data.paginatedHotels);
-            setTotalPages(data.totalPages);
-        } 
-        catch (error) {
-            console.error("Failed to fetch destinations:", error);
-        }
-    };
-
-    useEffect(() => {
-        getData(new URLSearchParams(searchParams));
-    }, []);
-
-    if (!paginatedHotels && !page && !totalPages) return (<div>LOADING...</div>);
-
+  if (loading) {
     return (
-        <div className='overflow-x-hidden'>
-            <div className='w-screen flex justify-center bg-gray-50 text-black'>
-                <div className='my-4 w-[70%]'>
-                    <form onSubmit={handleFilterSubmit} className='gap-2 mb-2'>
-                        <HotelSearchInputFilter name='minCost' type='number' placeholder='Min Cost'/>
-                        <HotelSearchInputFilter name='maxCost' type='number' placeholder='Max Cost'/>
-                        <button type='submit' className='rounded-3xl text-black px-5 border-gray-500 border-2 hover:cursor-pointer hover:bg-gray-100 transition-all'>Filter</button>
-                    </form>
-                    <div>
-                        <div className='grid grid-cols-3 w-[100%] gap-x-5'>
-                            {paginatedHotels.map((hotel: any) => (<HotelResultCard hotel={hotel} />))}
-                        </div>
-                    </div>
-                    <div className='flex gap-4 mt-4 justify-center items-center'>
-                        {page! > 1 && (
-                            <a onClick={e => handlePageSubmit(e, "d")} className="bg-white text-black px-3 py-1 rounded-xl cursor-pointer border-1 border-gray-500 hover:bg-gray-100 transition-all">
-                                ←
-                            </a>
-                        )}
-                        <span className="">Page {page} of {totalPages}</span>
-                        {page! < totalPages && (
-                            <a onClick={e => handlePageSubmit(e, "i")} className="bg-white text-black px-3 py-1 rounded-xl cursor-pointer border-1 border-gray-500 hover:bg-gray-100 transition-all">
-                                →
-                            </a>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+        {Array(6)
+          .fill(0)
+          .map((_, i) => (
+            <div
+              key={i}
+              className="animate-pulse bg-white h-64 rounded-lg shadow-md"
+            />
+          ))}
+      </div>
+    );
+  }
 
-export default Results
+  if (hotels.length === 0) {
+    return (
+      <div className="p-8 text-center text-gray-600">
+        No hotels found for those filters. Try adjusting your search.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+      {hotels.map((h) => (
+        <div
+          key={h.id}
+          onClick={() => router.push(`/hotel/${h.id}?${params.toString()}`)}
+          className="cursor-pointer"
+        >
+          <HotelResultCard hotel={h} />
+        </div>
+      ))}
+    </div>
+  );
+}
