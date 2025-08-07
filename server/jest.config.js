@@ -5,26 +5,38 @@
 
 /** @type {import('jest').Config} */
 const config = {
-  // All imported modules in your tests should be mocked automatically
-  // automock: false,
+  // Test environment
+  testEnvironment: 'node',
 
-  // Stop running tests after `n` failures
-  // bail: 0,
+  // Coverage collection
+  collectCoverage: true,
+  collectCoverageFrom: [
+    'services/**/*.js',
+    'routes/**/*.js',
+    'middleware/**/*.js',
+    'utils/**/*.js',
+    '!**/node_modules/**',
+    '!**/tests/**'
+  ],
 
-  // The directory where Jest should store its cached dependency information
-  // cacheDirectory: "/tmp/jest_rs",
+  // Coverage output
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
 
-  // Automatically clear mock calls, instances, contexts and results before every test
-  // clearMocks: false,
+  // Test file patterns
+  testMatch: [
+    '**/tests/**/*.test.js',
+    '**/tests/**/*.spec.js'
+  ],
 
-  // Indicates whether the coverage information should be collected while executing the test
-  // collectCoverage: false,
+  // Setup files
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
 
-  // An array of glob patterns indicating a set of files for which coverage information should be collected
-  // collectCoverageFrom: undefined,
+  // Verbose output
+  verbose: true,
 
-  // The directory where Jest should output its coverage files
-  // coverageDirectory: undefined,
+  // Test timeout
+  testTimeout: 10000,
 
   // An array of regexp pattern strings used to skip coverage collection
   // coveragePathIgnorePatterns: [
