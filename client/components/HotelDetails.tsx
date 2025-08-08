@@ -3,12 +3,16 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
+
 const HotelDetails = () => {
     const [showAllPhotos, setShowAllPhotos] = useState(false);
     const [details, setDetails] = useState<any>();
     const [rooms, setRooms] = useState<any[]>();
     const [images, setImages] = useState<any[]>();
     const [amenities, setAmenities] = useState<any[]>();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const searchParams = useSearchParams();
 
@@ -20,11 +24,34 @@ const HotelDetails = () => {
 
     const getData = async () => {
         try {
-            // TODO: move url out maybe to a config file
-            const response = await fetch(`http://localhost:5001/api/hotels/${searchParams.get("id")}?destination_id=${searchParams.get("destination_id")}&checkin=${searchParams.get("checkin")}&checkout=${searchParams.get("checkout")}&guests=${searchParams.get("guests")}`);
+            setLoading(true);
+            setError(null);
+            
+            const hotelId = searchParams.get("id");
+            const destinationId = searchParams.get("destination_id");
+            const checkin = searchParams.get("checkin");
+            const checkout = searchParams.get("checkout");
+            const guests = searchParams.get("guests");
+
+            if (!hotelId || !destinationId || !checkin || !checkout || !guests) {
+                throw new Error("Missing required parameters");
+            }
+
+            console.log('Fetching hotel details with params:', { hotelId, destinationId, checkin, checkout, guests });
+            
+            const url = `${API_BASE_URL}/hotels/${hotelId}?destination_id=${destinationId}&checkin=${checkin}&checkout=${checkout}&guests=${guests}`;
+            console.log('Hotel details URL:', url);
+            
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
 
             const data = await response.json();
-            console.log(data);
+            console.log('Hotel details response:', data);
+            
             setDetails(data.hotelDetails);
             setRooms(data.rooms);
 
@@ -42,6 +69,9 @@ const HotelDetails = () => {
         } 
         catch (error) {
             console.error("Failed to fetch hotel details:", error);
+            setError(error instanceof Error ? error.message : "Failed to fetch hotel details");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -49,7 +79,45 @@ const HotelDetails = () => {
         getData();
     }, []);
 
-    if (!details || !images || !amenities || !rooms) return (<div>LOADING...</div>);
+    if (loading) {
+        return (
+            <div className="bg-slate-50 text-gray-800 min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-slate-900 mx-auto"></div>
+                    <p className="mt-4 text-lg text-slate-600">Loading hotel details...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-slate-50 text-gray-800 min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
+                        <h3 className="font-medium text-lg">Error loading hotel details</h3>
+                        <p className="text-sm mt-2">{error}</p>
+                        <button 
+                            onClick={() => getData()} 
+                            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+                        >
+                            Try again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!details || !images || !amenities || !rooms) {
+        return (
+            <div className="bg-slate-50 text-gray-800 min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-lg text-slate-600">No hotel details available</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-slate-50 text-gray-800 min-h-screen">
