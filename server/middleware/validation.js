@@ -119,8 +119,88 @@ const validatePagination = (req, res, next) => {
   next();
 };
 
+const validateUserRegistration = (req, res, next) => {
+  const { username, email, password, phoneNumber } = req.body;
+  const errors = [];
+
+  // Username validation
+  if (!username) {
+    errors.push('Username is required');
+  } else if (username.length < 3) {
+    errors.push('Username must be at least 3 characters long');
+  } else if (username.length > 30) {
+    errors.push('Username must be less than 30 characters');
+  } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    errors.push('Username can only contain letters, numbers, and underscore');
+  }
+
+  // Email validation
+  if (!email) {
+    errors.push('Email is required');
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      errors.push('Invalid email format');
+    }
+  }
+
+  // Password validation
+  if (!password) {
+    errors.push('Password is required');
+  } else if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter, one uppercase letter, and one number');
+  }
+
+  // Phone number verification
+  if (!phoneNumber) {
+    errors.push('Phone number is required');
+  } else if (!/^\+?[\d\s\-\(\)]{8,15}$/.test(phoneNumber)) {
+    errors.push('Invalid phone number format');
+  }
+
+  if (errors.length > 0) {
+    return res,status(400).json({
+      success: false,
+      errors
+    });
+  }
+
+  next();
+};
+
+const validateUserLogin = (req, res, next) => {
+  const { email, password } = req.body;
+  const errors = [];
+
+  if (!email) {
+    errors.push('Email is required');
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      errors.push('Invalid email format');
+    }
+  }
+
+  if (!password) {
+    errors.push('Password is required');
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      errors
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   validateDestinationSearch,
   validateHotelSearch,
-  validatePagination
+  validatePagination,
+  validateUserRegistration,
+  validateUserLogin
 };

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "d04a258e-3d95-4c43-9962-c3dcc742ae2b",
+    "username": "testuser",
+    "email": "test@example.com",
+    "password": "$2b$10$BLgli639DXIsaGL2VDg83ecHX1RSa0uGZSfGHvedfW7ZWRKyYYlya",
+    "phoneNumber": "+1234567890",
+    "isVerified": false,
+    "verificationToken": "8ee7eb095a0a967a58e812e512fb946bbbe4fcd2cb877518ac994936123a5a27",
+    "createdAt": "2025-08-10T12:23:11.221Z",
+    "updatedAt": "2025-08-10T12:23:11.221Z"
+  },
+  {
+    "id": "5ec9bb63-d1bb-408c-ac29-1d1617966e1e",
+    "username": "zachsindhu",
+    "email": "zachsindhu@gmail.com",
+    "password": "$2b$10$vh7OfRlx9C7yfXV9glVW/em3rcOrrlA9upfKmVu2hGUXzRNYB7PqS",
+    "phoneNumber": "86187048",
+    "isVerified": true,
+    "verificationToken": null,
+    "createdAt": "2025-08-10T13:06:13.491Z",
+    "updatedAt": "2025-08-10T13:06:22.247Z"
+  },
+  {
+    "id": "9b3c7ff0-fcd6-4fad-b645-58472fbc64b1",
+    "username": "zacharyedward",
+    "email": "zachary@gmail.com",
+    "password": "$2b$10$oUUd4b96IFa8MHHDJUmkRupel6vBF9xFSLHdJwqNk1M89Y.nBYOD.",
+    "phoneNumber": "12345678",
+    "isVerified": true,
+    "verificationToken": null,
+    "createdAt": "2025-08-10T13:08:34.711Z",
+    "updatedAt": "2025-08-10T13:08:38.698Z"
+  }
+]
