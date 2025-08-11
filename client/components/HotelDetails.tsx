@@ -11,6 +11,7 @@ const HotelDetails = () => {
     const [rooms, setRooms] = useState<any[]>();
     const [images, setImages] = useState<any[]>();
     const [amenities, setAmenities] = useState<any[]>();
+    const [pricing, setPricing] = useState<any>();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +58,42 @@ const HotelDetails = () => {
             
             // The API returns the hotel details directly, not wrapped in hotelDetails
             setDetails(data);
-            // setRooms(data.rooms); // This might not exist in the current API
+            
+            // Try to fetch pricing data from the prices endpoint
+            try {
+                const priceResponse = await fetch(
+                    `${API_BASE_URL}/hotels/${hotelId}/prices?` +
+                    `destination_id=${encodeURIComponent(destinationId)}&` +
+                    `checkin=${encodeURIComponent(checkin)}&` +
+                    `checkout=${encodeURIComponent(checkout)}&` +
+                    `guests=${encodeURIComponent(guests)}`
+                );
+                
+                if (priceResponse.ok) {
+                    const priceData = await priceResponse.json();
+                    console.log('Hotel pricing response:', priceData);
+                    setPricing(priceData);
+                    
+                    // If pricing data includes room information, use it
+                    if (priceData.rooms && Array.isArray(priceData.rooms) && priceData.rooms.length > 0) {
+                        setRooms(priceData.rooms);
+                    } else {
+                        // Create a default room entry with pricing info
+                        setRooms([{
+                            key: 'standard',
+                            roomDescription: 'Standard Room',
+                            rooms_available: priceData.roomsAvailable || 'Available',
+                            price: priceData.price ? `SGD ${priceData.price}/night` : 'Contact for pricing'
+                        }]);
+                    }
+                } else {
+                    console.warn('Failed to fetch pricing data');
+                    setRooms([]);
+                }
+            } catch (priceError) {
+                console.warn('Error fetching pricing:', priceError);
+                setRooms([]);
+            }
 
             // Check if we have image_details before processing
             const tempImgs = [];
@@ -121,7 +157,7 @@ const HotelDetails = () => {
         );
     }
 
-    if (!details || !images || !amenities || !rooms) {
+    if (!details || !images || !amenities) {
         return (
             <div className="bg-slate-50 text-gray-800 min-h-screen flex items-center justify-center">
                 <div className="text-center">
@@ -254,55 +290,87 @@ const HotelDetails = () => {
             >
                 Available Rooms
             </h2>
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                {rooms.map((room) => (
-                <div
-                    key={room.key}
-                    className="bg-white border border-slate-100 rounded-2xl p-6 shadow hover:shadow-lg transition transform hover:-translate-y-1"
-                >
-                    <h3
-                    className="text-xl font-bold mb-1 text-slate-900"
-                    style={{ fontFamily: '"Playfair Display", serif' }}
+            {rooms && rooms.length > 0 ? (
+                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                    {rooms.map((room) => (
+                    <div
+                        key={room.key}
+                        className="bg-white border border-slate-100 rounded-2xl p-6 shadow hover:shadow-lg transition transform hover:-translate-y-1"
                     >
-                    {room.roomDescription}
-                    </h3>
-                    <p
-                    className="text-slate-500"
-                    style={{ fontFamily: '"Poppins", sans-serif' }}
-                    >
-                    {`${room.rooms_available} rooms available`}
-                    </p>
-                    <p
-                    className="mt-3 font-semibold text-sky-700"
-                    style={{ fontFamily: '"Poppins", sans-serif' }}
-                    >
-                    {room.price}
-                    </p>
-                    <button
-                    onClick={() => {
-                        const destination_id = searchParams?.get('destination_id') || '';
-                        const checkin = searchParams?.get('checkin') || '';
-                        const checkout = searchParams?.get('checkout') || '';
-                        const guests = searchParams?.get('guests') || '1';
-                        const rooms = searchParams?.get('rooms') || '1';
-                        
-                        const bookingUrl = `/booking/${params?.id}?` + 
-                            `destination_id=${encodeURIComponent(destination_id)}&` +
-                            `checkin=${encodeURIComponent(checkin)}&` +
-                            `checkout=${encodeURIComponent(checkout)}&` +
-                            `guests=${encodeURIComponent(guests)}&` +
-                            `rooms=${encodeURIComponent(rooms)}`;
-                        
-                        router.push(bookingUrl);
-                    }}
-                    className="mt-5 w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-slate-900 font-semibold py-2 rounded-lg hover:opacity-90 transition"
-                    style={{ fontFamily: '"Poppins", sans-serif' }}
-                    >
-                    Book Now
-                    </button>
+                        <h3
+                        className="text-xl font-bold mb-1 text-slate-900"
+                        style={{ fontFamily: '"Playfair Display", serif' }}
+                        >
+                        {room.roomDescription}
+                        </h3>
+                        <p
+                        className="text-slate-500"
+                        style={{ fontFamily: '"Poppins", sans-serif' }}
+                        >
+                        {`${room.rooms_available} rooms available`}
+                        </p>
+                        <p
+                        className="mt-3 font-semibold text-sky-700"
+                        style={{ fontFamily: '"Poppins", sans-serif' }}
+                        >
+                        {room.price}
+                        </p>
+                        <button
+                        onClick={() => {
+                            const destination_id = searchParams?.get('destination_id') || '';
+                            const checkin = searchParams?.get('checkin') || '';
+                            const checkout = searchParams?.get('checkout') || '';
+                            const guests = searchParams?.get('guests') || '1';
+                            const rooms = searchParams?.get('rooms') || '1';
+                            
+                            const bookingUrl = `/booking/${params?.id}?` + 
+                                `destination_id=${encodeURIComponent(destination_id)}&` +
+                                `checkin=${encodeURIComponent(checkin)}&` +
+                                `checkout=${encodeURIComponent(checkout)}&` +
+                                `guests=${encodeURIComponent(guests)}&` +
+                                `rooms=${encodeURIComponent(rooms)}`;
+                            
+                            router.push(bookingUrl);
+                        }}
+                        className="mt-5 w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-slate-900 font-semibold py-2 rounded-lg hover:opacity-90 transition"
+                        style={{ fontFamily: '"Poppins", sans-serif' }}
+                        >
+                        Book Now
+                        </button>
+                    </div>
+                    ))}
                 </div>
-                ))}
-            </div>
+            ) : (
+                <div className="text-center py-8">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
+                        <h3 className="text-lg font-semibold text-blue-900 mb-2">Room Information Unavailable</h3>
+                        <p className="text-blue-700 mb-4">
+                            Detailed room information is currently not available, but you can still proceed with booking.
+                        </p>
+                        <button
+                            onClick={() => {
+                                const destination_id = searchParams?.get('destination_id') || '';
+                                const checkin = searchParams?.get('checkin') || '';
+                                const checkout = searchParams?.get('checkout') || '';
+                                const guests = searchParams?.get('guests') || '1';
+                                const rooms = searchParams?.get('rooms') || '1';
+                                
+                                const bookingUrl = `/booking/${params?.id}?` + 
+                                    `destination_id=${encodeURIComponent(destination_id)}&` +
+                                    `checkin=${encodeURIComponent(checkin)}&` +
+                                    `checkout=${encodeURIComponent(checkout)}&` +
+                                    `guests=${encodeURIComponent(guests)}&` +
+                                    `rooms=${encodeURIComponent(rooms)}`;
+                                
+                                router.push(bookingUrl);
+                            }}
+                            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+                        >
+                            Book This Hotel
+                        </button>
+                    </div>
+                </div>
+            )}
             </section>
 
             {/* Map */}

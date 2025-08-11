@@ -83,8 +83,8 @@ router.get('/:id', validateHotelId, async (req, res) => {
     }
 });
 
-// GET /api/hotels/:id/price - Get price for specific hotel
-router.get('/:id/price', validateHotelPrice, async (req, res) => {
+// GET /api/hotels/:id/prices - Get prices for specific hotel
+router.get('/:id/prices', validateHotelPrice, async (req, res) => {
     try {
         const hotelId = req.params.id;
         const { destination_id, checkin, checkout, guests, lang, currency, country_code } = req.query;
