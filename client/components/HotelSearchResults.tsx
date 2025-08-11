@@ -48,12 +48,12 @@ export default function HotelSearchResults() {
       setError(null);
       
       try {
-        console.log('Fetching hotels with params:', params.toString());
+        console.log('Fetching hotels with params:', (params ?? new URLSearchParams()).toString());
         console.log('API_BASE_URL:', API_BASE_URL);
-        console.log('Full URL:', `${API_BASE_URL}/hotels/search?${params.toString()}`);
+        console.log('Full URL:', `${API_BASE_URL}/hotels/search?${(params ?? new URLSearchParams()).toString()}`);
         
         const res = await fetch(
-          `${API_BASE_URL}/hotels/search?${params.toString()}`,
+          `${API_BASE_URL}/hotels/search?${(params ?? new URLSearchParams()).toString()}`,
           {
             method: 'GET',
             headers: {
@@ -170,7 +170,7 @@ export default function HotelSearchResults() {
         {hotels.map((hotel) => (
           <div
             key={hotel.id}
-            onClick={() => router.push(`/hotel/${hotel.id}?${params.toString()}`)}
+            onClick={() => router.push(`/hotel/${hotel.id}?${(params ?? new URLSearchParams()).toString()}`)}
             className="cursor-pointer transform hover:scale-105 transition-transform duration-200"
           >
             <HotelResultCard hotel={hotel} />
@@ -184,7 +184,7 @@ export default function HotelSearchResults() {
           <button
             onClick={() => {
               if (pagination.page > 1) {
-                const newParams = new URLSearchParams(params.toString());
+                const newParams = new URLSearchParams((params ?? new URLSearchParams()).toString());
                 newParams.set('page', String(pagination.page - 1));
                 router.push(`/search?${newParams.toString()}`);
               }
@@ -202,7 +202,7 @@ export default function HotelSearchResults() {
           <button
             onClick={() => {
               if (pagination.page < pagination.totalPages) {
-                const newParams = new URLSearchParams(params.toString());
+                const newParams = new URLSearchParams((params ?? new URLSearchParams()).toString());
                 newParams.set('page', String(pagination.page + 1));
                 router.push(`/search?${newParams.toString()}`);
               }

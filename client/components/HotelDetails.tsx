@@ -28,11 +28,17 @@ const HotelDetails = () => {
             setLoading(true);
             setError(null);
             
-            const hotelId = searchParams.get("id");
-            const destinationId = searchParams.get("destination_id");
-            const checkin = searchParams.get("checkin");
-            const checkout = searchParams.get("checkout");
-            const guests = searchParams.get("guests");
+            if (!searchParams) {
+                throw new Error("Search parameters are not available");
+            }
+            
+            // Get hotel ID from query params
+            const hotelId = searchParams!.get("id");
+            const destinationId = searchParams!.get("destination_id");
+            const checkin = searchParams!.get("checkin");
+            const checkout = searchParams!.get("checkout");
+            const guests = searchParams!.get("guests");
+
 
             if (!hotelId || !destinationId || !checkin || !checkout || !guests) {
                 throw new Error("Missing required parameters");
