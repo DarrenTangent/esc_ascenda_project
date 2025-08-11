@@ -1,15 +1,23 @@
 # ESC Ascenda Project - Server
 
-This is the backend server for the ESC Ascenda project, handling destination search and hotel booking functionality.
+This is the backend server for the ESC Ascenda project, providing a comprehensive hotel search service integrated with Ascenda's pricing APIs.
 
-## Features
+## 🚀 Features
 
+- **Ascenda API Integration**: Full integration with Ascenda's mock pricing endpoints
+- **Polling-based Price Search**: Automatic retries until price data is complete
 - **Fast Destination Search**: Text-based autocomplete with fuzzy search capabilities
-- **Hotel Search**: Search for hotels based on destination, dates, guests, and rooms
-- **Input Validation**: Comprehensive validation for all API endpoints
+- **Hotel Search with Pricing**: Combined hotel details and real-time pricing
+- **Advanced Caching**: Intelligent caching strategy for optimal performance
+- **Input Validation**: Comprehensive validation following Ascenda requirements
 - **Rate Limiting**: Protection against excessive API calls
-- **CORS Support**: Configured for frontend integration
-- **Error Handling**: Centralized error handling with proper HTTP status codes
+- **Error Handling**: Robust error handling with fallback to local data
+- **Multi-room Support**: Support for complex guest/room configurations
+
+## 📖 Documentation
+
+- **[Ascenda API Integration](./ASCENDA_API.md)** - Comprehensive guide to using the Ascenda hotel search APIs
+- **[API Testing](./examples/ascenda-api-test.js)** - Test suite for all endpoints
 
 ## API Endpoints
 

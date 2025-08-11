@@ -42,6 +42,69 @@ const sanitizeQuery = (query) => {
 };
 
 /**
+ * Format guests parameter for Ascenda API
+ * Handles single room and multiple rooms with pipe separators
+ * @param {string|number} guests - Number of guests per room or pipe-separated string
+ * @param {number} rooms - Number of rooms (default: 1)
+ * @returns {string} - Formatted guests string for API
+ */
+const formatGuestsForAPI = (guests, rooms = 1) => {
+  if (!guests) return '2'; // Default to 2 guests
+  
+  // If already formatted with pipes, return as is
+  if (typeof guests === 'string' && guests.includes('|')) {
+    return guests;
+  }
+  
+  const guestsPerRoom = parseInt(guests) || 2;
+  
+  // For single room
+  if (rooms === 1) {
+    return guestsPerRoom.toString();
+  }
+  
+  // For multiple rooms, repeat guests with pipe separator
+  return Array(rooms).fill(guestsPerRoom).join('|');
+};
+
+/**
+ * Parse guests string from API format
+ * @param {string} guestsString - Pipe-separated guests string
+ * @returns {object} - Parsed guests info { totalGuests, rooms, guestsPerRoom }
+ */
+const parseGuestsFromAPI = (guestsString) => {
+  if (!guestsString) {
+    return { totalGuests: 2, rooms: 1, guestsPerRoom: [2] };
+  }
+  
+  const guestsPerRoom = guestsString.split('|').map(g => parseInt(g) || 2);
+  const totalGuests = guestsPerRoom.reduce((sum, guests) => sum + guests, 0);
+  
+  return {
+    totalGuests,
+    rooms: guestsPerRoom.length,
+    guestsPerRoom
+  };
+};
+
+/**
+ * Build image URL from Ascenda image details
+ * @param {object} imageDetails - Image details from API
+ * @param {number} index - Image index (default: 0)
+ * @returns {string} - Full image URL
+ */
+const buildImageUrl = (imageDetails, index = 0) => {
+  if (!imageDetails || !imageDetails.prefix || !imageDetails.suffix) {
+    return '';
+  }
+  
+  const { prefix, suffix, count } = imageDetails;
+  const imageIndex = Math.min(index, (count || 1) - 1);
+  
+  return `${prefix}${imageIndex}${suffix}`;
+};
+
+/**
  * Generate cache key for search results
  * @param {object} params - Search parameters
  * @returns {string} - Cache key
@@ -101,6 +164,9 @@ module.exports = {
   parseDate,
   calculateNights,
   sanitizeQuery,
+  formatGuestsForAPI,
+  parseGuestsFromAPI,
+  buildImageUrl,
   generateCacheKey,
   debounce,
   formatPrice,

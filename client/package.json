@@ -2,8 +2,6 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
-  
-
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -12,24 +10,30 @@
     "test": "jest"
   },
   "dependencies": {
+    "lucide-react": "^0.536.0",
     "next": "15.3.4",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "rsuite": "^5.83.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@testing-library/jest-dom": "^6.6.4",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.3.4",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
-    "tailwindcss": "^4",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.11",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

@@ -21,7 +21,7 @@ const validateDestinationSearch = (req, res, next) => {
 };
 
 const validateHotelSearch = (req, res, next) => {
-  const { destination_id, checkin, checkout } = req.query;
+  const { destination_id, checkin, checkout, guests } = req.query;
   
   // Required fields
   if (!destination_id) {
@@ -51,23 +51,27 @@ const validateHotelSearch = (req, res, next) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
+  // Add 3 days minimum advance booking requirement per Ascenda docs
+  const minCheckinDate = new Date(today);
+  minCheckinDate.setDate(today.getDate() + 3);
+  
   if (isNaN(checkinDate.getTime())) {
     return res.status(400).json({ 
-      error: 'Invalid check-in date format',
+      error: 'Invalid check-in date format. Use YYYY-MM-DD',
       field: 'checkin'
     });
   }
   
   if (isNaN(checkoutDate.getTime())) {
     return res.status(400).json({ 
-      error: 'Invalid check-out date format',
+      error: 'Invalid check-out date format. Use YYYY-MM-DD',
       field: 'checkout'
     });
   }
   
-  if (checkinDate < today) {
+  if (checkinDate < minCheckinDate) {
     return res.status(400).json({ 
-      error: 'Check-in date cannot be in the past',
+      error: 'Check-in date must be at least 3 days in advance',
       field: 'checkin'
     });
   }
@@ -78,16 +82,16 @@ const validateHotelSearch = (req, res, next) => {
       field: 'checkout'
     });
   }
-  
-  // Optional: Validate guests and rooms
-  const { guests, rooms } = req.query;
-  
+
   if (guests && (isNaN(guests) || parseInt(guests) < 1 || parseInt(guests) > 20)) {
     return res.status(400).json({ 
       error: 'Guests must be a number between 1 and 20',
       field: 'guests'
     });
   }
+  
+  // Optional: Validate guests and rooms
+  const { rooms } = req.query;
   
   if (rooms && (isNaN(rooms) || parseInt(rooms) < 1 || parseInt(rooms) > 10)) {
     return res.status(400).json({ 
@@ -119,8 +123,185 @@ const validatePagination = (req, res, next) => {
   next();
 };
 
+
+const validateUserRegistration = (req, res, next) => {
+  const { username, email, password, phoneNumber } = req.body;
+  const errors = [];
+
+  // Username validation
+  if (!username) {
+    errors.push('Username is required');
+  } else if (username.length < 3) {
+    errors.push('Username must be at least 3 characters long');
+  } else if (username.length > 30) {
+    errors.push('Username must be less than 30 characters');
+  } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    errors.push('Username can only contain letters, numbers, and underscore');
+  }
+
+  // Email validation
+  if (!email) {
+    errors.push('Email is required');
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      errors.push('Invalid email format');
+    }
+  }
+
+  // Password validation
+  if (!password) {
+    errors.push('Password is required');
+  } else if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter, one uppercase letter, and one number');
+  }
+
+  // Phone number verification
+  if (!phoneNumber) {
+    errors.push('Phone number is required');
+  } else if (!/^\+?[\d\s\-\(\)]{8,15}$/.test(phoneNumber)) {
+    errors.push('Invalid phone number format');
+  }
+
+  if (errors.length > 0) {
+    return res,status(400).json({
+      success: false,
+      errors
+    });
+  }
+
+  next();
+};
+
+const validateUserLogin = (req, res, next) => {
+  const { email, password } = req.body;
+  const errors = [];
+
+  if (!email) {
+    errors.push('Email is required');
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      errors.push('Invalid email format');
+    }
+  }
+
+  if (!password) {
+    errors.push('Password is required');
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      errors
+    });
+  }
+};
+
+const validateHotelId = (req, res, next) => {
+  const { id } = req.params;
+  
+  if (!id) {
+    return res.status(400).json({ 
+      error: 'Hotel ID is required',
+      field: 'id'
+    });
+  }
+  
+  if (typeof id !== 'string' || id.trim().length === 0) {
+    return res.status(400).json({ 
+      error: 'Hotel ID must be a non-empty string',
+      field: 'id'
+    });
+  }
+  
+  next();
+};
+
+const validateHotelPrice = (req, res, next) => {
+  const { id } = req.params;
+  const { destination_id, checkin, checkout } = req.query;
+  
+  // Validate hotel ID first
+  if (!id) {
+    return res.status(400).json({ 
+      error: 'Hotel ID is required',
+      field: 'id'
+    });
+  }
+  
+  // Required fields for price search
+  if (!destination_id) {
+    return res.status(400).json({ 
+      error: 'Destination ID is required',
+      field: 'destination_id'
+    });
+  }
+  
+  if (!checkin) {
+    return res.status(400).json({ 
+      error: 'Check-in date is required',
+      field: 'checkin'
+    });
+  }
+  
+  if (!checkout) {
+    return res.status(400).json({ 
+      error: 'Check-out date is required',
+      field: 'checkout'
+    });
+  }
+  
+  // Date validation
+  const checkinDate = new Date(checkin);
+  const checkoutDate = new Date(checkout);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Add 3 days minimum advance booking requirement per Ascenda docs
+  const minCheckinDate = new Date(today);
+  minCheckinDate.setDate(today.getDate() + 3);
+  
+  if (isNaN(checkinDate.getTime())) {
+    return res.status(400).json({ 
+      error: 'Invalid check-in date format. Use YYYY-MM-DD',
+      field: 'checkin'
+    });
+  }
+  
+  if (isNaN(checkoutDate.getTime())) {
+    return res.status(400).json({ 
+      error: 'Invalid check-out date format. Use YYYY-MM-DD',
+      field: 'checkout'
+    });
+  }
+  
+  if (checkinDate < minCheckinDate) {
+    return res.status(400).json({ 
+      error: 'Check-in date must be at least 3 days in advance',
+      field: 'checkin'
+    });
+  }
+  
+  if (checkoutDate <= checkinDate) {
+    return res.status(400).json({ 
+      error: 'Check-out date must be after check-in date',
+      field: 'checkout'
+    });
+  }
+  
+  next();
+};
+
 module.exports = {
   validateDestinationSearch,
   validateHotelSearch,
+  validatePagination,
+  validateUserRegistration,
+  validateUserLogin,
+  validateHotelId,
+  validateHotelPrice,
   validatePagination
 };
