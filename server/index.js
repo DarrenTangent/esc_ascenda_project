@@ -1,65 +1,79 @@
+// server/index.js
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 const destinationRoutes = require('./routes/destinations');
 const hotels = require('./routes/hotels');
+const bookingsRoute = require('./routes/bookings'); // <-- needed
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5001; // team standard
 
-// Security middleware
+// Security / infra
 app.use(helmet());
 app.use(compression());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
-app.use('/api/', limiter);
+// Rate limit (off during tests)
+if (process.env.NODE_ENV !== 'test') {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: 'Too many requests from this IP, please try again later.'
+  });
+  app.use('/api/', limiter);
+}
 
-// CORS configuration
+// CORS
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   credentials: true
 }));
 
-// Body parsing middleware
+// Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// DB connect (skip in tests)
+if (process.env.NODE_ENV !== 'test') {
+  mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/hotel-booking')
+    .then(() => console.log('MongoDB connected'))
+    .catch(err => console.error(err));
+}
+
 // Routes
+app.use('/api/bookings', bookingsRoute);
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/hotels', hotels);
-app.use('/api/auth', require('./routes/auth'));
+// app.use('/api/auth', require('./routes/auth')); // only if this file exists
 
-// Health check endpoint
+// Health
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Error handling middleware
+// Errors
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Something went wrong!',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// 404
+app.use('*', (req, res) => res.status(404).json({ error: 'Route not found' }));
 
 module.exports = app;
+
+// Only listen when running `node index.js` (not in tests)
+if (require.main === module && process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
