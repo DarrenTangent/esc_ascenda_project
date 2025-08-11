@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from "react";
-import { useSearchParams, useParams } from "next/navigation";
+import { useSearchParams, useParams, useRouter } from "next/navigation";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
 
@@ -16,6 +16,7 @@ const HotelDetails = () => {
 
     const searchParams = useSearchParams();
     const params = useParams();
+    const router = useRouter();
 
     // const rooms = [
     //     { id: 1, type: "Standard Room", price: "$120/night", guests: "2 guests" },
@@ -278,13 +279,26 @@ const HotelDetails = () => {
                     {room.price}
                     </p>
                     <button
-                    onClick={() =>
-                        alert(`Redirect to booking for ${room.type}`)
-                    }
+                    onClick={() => {
+                        const destination_id = searchParams?.get('destination_id') || '';
+                        const checkin = searchParams?.get('checkin') || '';
+                        const checkout = searchParams?.get('checkout') || '';
+                        const guests = searchParams?.get('guests') || '1';
+                        const rooms = searchParams?.get('rooms') || '1';
+                        
+                        const bookingUrl = `/booking/${params?.id}?` + 
+                            `destination_id=${encodeURIComponent(destination_id)}&` +
+                            `checkin=${encodeURIComponent(checkin)}&` +
+                            `checkout=${encodeURIComponent(checkout)}&` +
+                            `guests=${encodeURIComponent(guests)}&` +
+                            `rooms=${encodeURIComponent(rooms)}`;
+                        
+                        router.push(bookingUrl);
+                    }}
                     className="mt-5 w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-slate-900 font-semibold py-2 rounded-lg hover:opacity-90 transition"
                     style={{ fontFamily: '"Poppins", sans-serif' }}
                     >
-                    Select Room
+                    Book Now
                     </button>
                 </div>
                 ))}

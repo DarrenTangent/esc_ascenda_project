@@ -41,9 +41,25 @@ export default function HotelSearchResults() {
     totalHotels: 0,
     pageSize: 30
   });
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    minPrice: '',
+    maxPrice: '',
+    minRating: '',
+    sortBy: 'name' // 'name', 'price_low', 'price_high', 'rating'
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [filteredHotels, setFilteredHotels] = useState<Hotel[]>([]);
 
   useEffect(() => {
     async function fetchData() {
+      if (!params) {
+        setLoading(false);
+        setError('No search parameters provided');
+        return;
+      }
+      
       setLoading(true);
       setError(null);
       
@@ -102,6 +118,54 @@ export default function HotelSearchResults() {
     fetchData();
   }, [params]);
 
+  // Filter and sort hotels effect
+  useEffect(() => {
+    let filtered = [...hotels];
+    
+    // Apply price filters
+    if (filters.minPrice) {
+      filtered = filtered.filter(hotel => hotel.price >= parseFloat(filters.minPrice));
+    }
+    if (filters.maxPrice) {
+      filtered = filtered.filter(hotel => hotel.price <= parseFloat(filters.maxPrice));
+    }
+    
+    // Apply rating filter
+    if (filters.minRating) {
+      filtered = filtered.filter(hotel => hotel.rating >= parseFloat(filters.minRating));
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (filters.sortBy) {
+        case 'price_low':
+          return a.price - b.price;
+        case 'price_high':
+          return b.price - a.price;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'name':
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
+    
+    setFilteredHotels(filtered);
+  }, [hotels, filters]);
+
+  const handleFilterChange = (key: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      minPrice: '',
+      maxPrice: '',
+      minRating: '',
+      sortBy: 'name'
+    });
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -140,7 +204,7 @@ export default function HotelSearchResults() {
     );
   }
 
-  if (hotels.length === 0) {
+  if (hotels.length === 0 && !loading) {
     return (
       <div className="container mx-auto px-4 py-8">
         {/* Debug info */}
@@ -182,29 +246,135 @@ export default function HotelSearchResults() {
           Hotels Found
         </h1>
         <p className="text-gray-600">
-          {pagination.totalHotels} hotels • Page {pagination.page} of {pagination.totalPages}
+          {pagination.totalHotels} hotels • Showing {filteredHotels.length} after filters
         </p>
       </div>
 
-      {/* Hotel Results Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {hotels.map((hotel) => (
-          <div
-            key={hotel.id}
-            onClick={() => router.push(`/hotel/${hotel.id}?${params.toString()}`)}
-            className="cursor-pointer transform hover:scale-105 transition-transform duration-200"
+      {/* Filter Controls */}
+      <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">Filter & Sort</h3>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="text-indigo-600 hover:text-indigo-800 font-medium"
           >
-            <HotelResultCard hotel={hotel} />
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </button>
+        </div>
+        
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Price Range */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Min Price (SGD)</label>
+              <input
+                type="number"
+                value={filters.minPrice}
+                onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Max Price (SGD)</label>
+              <input
+                type="number"
+                value={filters.maxPrice}
+                onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+                placeholder="1000"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            
+            {/* Star Rating */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Min Star Rating</label>
+              <select
+                value={filters.minRating}
+                onChange={(e) => handleFilterChange('minRating', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Any Rating</option>
+                <option value="3">3+ Stars</option>
+                <option value="4">4+ Stars</option>
+                <option value="5">5 Stars</option>
+              </select>
+            </div>
+            
+            {/* Sort By */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+              <select
+                value={filters.sortBy}
+                onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="name">Hotel Name</option>
+                <option value="price_low">Price: Low to High</option>
+                <option value="price_high">Price: High to Low</option>
+                <option value="rating">Rating: High to Low</option>
+              </select>
+            </div>
           </div>
-        ))}
+        )}
+        
+        {(filters.minPrice || filters.maxPrice || filters.minRating) && (
+          <div className="mt-4 flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              Active filters: 
+              {filters.minPrice && <span className="ml-2 bg-indigo-100 text-indigo-800 px-2 py-1 rounded">Min: SGD {filters.minPrice}</span>}
+              {filters.maxPrice && <span className="ml-2 bg-indigo-100 text-indigo-800 px-2 py-1 rounded">Max: SGD {filters.maxPrice}</span>}
+              {filters.minRating && <span className="ml-2 bg-indigo-100 text-indigo-800 px-2 py-1 rounded">{filters.minRating}+ Stars</span>}
+            </div>
+            <button
+              onClick={clearFilters}
+              className="text-sm text-red-600 hover:text-red-800 font-medium"
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Hotel Results Grid */}
+      {filteredHotels.length === 0 && hotels.length > 0 ? (
+        <div className="text-center py-12">
+          <div className="text-gray-400 mb-4">
+            <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No hotels match your filters</h3>
+          <p className="text-gray-600 mb-4">
+            Try adjusting your price range or rating requirements.
+          </p>
+          <button 
+            onClick={clearFilters}
+            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition"
+          >
+            Clear All Filters
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {filteredHotels.map((hotel) => (
+            <div
+              key={hotel.id}
+              onClick={() => router.push(`/hotel/${hotel.id}?${params?.toString() || ''}`)}
+              className="cursor-pointer transform hover:scale-105 transition-transform duration-200"
+            >
+              <HotelResultCard hotel={hotel} />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
         <div className="flex justify-center items-center space-x-4">
           <button
             onClick={() => {
-              if (pagination.page > 1) {
+              if (pagination.page > 1 && params) {
                 const newParams = new URLSearchParams(params.toString());
                 newParams.set('page', String(pagination.page - 1));
                 router.push(`/search?${newParams.toString()}`);
@@ -222,7 +392,7 @@ export default function HotelSearchResults() {
           
           <button
             onClick={() => {
-              if (pagination.page < pagination.totalPages) {
+              if (pagination.page < pagination.totalPages && params) {
                 const newParams = new URLSearchParams(params.toString());
                 newParams.set('page', String(pagination.page + 1));
                 router.push(`/search?${newParams.toString()}`);
