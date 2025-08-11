@@ -1,12 +1,8 @@
-'use client'
+// app/search/page.tsx
+'use client';
 
-import HotelSearchResults from '@/components/HotelSearchResults'
-import React from 'react'
+import HotelSearchResults from '@/components/HotelSearchResults';
 
-const search = () => {
-    return (
-        <HotelSearchResults/>
-    )
+export default function SearchPage() {
+  return <HotelSearchResults />;
 }
-
-export default search

@@ -1,4 +1,7 @@
-import DestinationSearch from "@/components/DestinationSearch";
+// app/page.tsx
+'use client';
+
+import DestinationSearch from '@/components/DestinationSearch';
 
 export default function Home() {
   return (
