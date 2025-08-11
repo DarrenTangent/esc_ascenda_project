@@ -10,7 +10,7 @@ const destinationRoutes = require('./routes/destinations'); // friends' route
 const bookingsRoute = require('./routes/bookings');          // your route
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;// should i change this to 5001?
 
 /* ---------- Security / infra ---------- */
 app.use(helmet());
