@@ -198,7 +198,7 @@ const validateUserLogin = (req, res, next) => {
       errors
     });
   }
-
+};
 
 const validateHotelId = (req, res, next) => {
   const { id } = req.params;
