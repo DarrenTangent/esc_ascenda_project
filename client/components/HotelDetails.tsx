@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -61,7 +62,7 @@ const HotelDetails = () => {
             }
             setImages(tempImgs);
             
-            const ams: String[] = [];
+            const ams: string[] = [];
             for (const key in data.hotelDetails.amenities) {
                 ams.push(key);
             }
