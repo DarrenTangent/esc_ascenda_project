@@ -1,10 +1,30 @@
 /** @type {import('jest').Config} */
 module.exports = {
+  // Environment
   testEnvironment: 'node',
-  testMatch: ['**/tests/**/*.test.js'],
+
+  // Test files
+  testMatch: ['**/tests/**/*.test.js', '**/tests/**/*.spec.js'],
+
+  // Output & stability
   verbose: true,
-  // If you use mongodb-memory-server in tests/setupMongo.js, add:
-  // setupFilesAfterEnv: ['<rootDir>/tests/setupMongo.js'],
-  // Helps avoid race conditions with DB
-  runInBand: true
+  runInBand: true,          // from your HEAD to avoid DB race conditions
+  testTimeout: 10000,       // from main
+
+  // Coverage (from main)
+  collectCoverage: true,
+  collectCoverageFrom: [
+    'services/**/*.js',
+    'routes/**/*.js',
+    'middleware/**/*.js',
+    'utils/**/*.js',
+    '!**/node_modules/**',
+    '!**/tests/**'
+  ],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
+  coverageProvider: 'v8',
+
+  // Setup (from main). If you don't have this file, create it or comment this out.
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
 };

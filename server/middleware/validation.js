@@ -21,7 +21,7 @@ const validateDestinationSearch = (req, res, next) => {
 };
 
 const validateHotelSearch = (req, res, next) => {
-  const { destination_id, checkin, checkout } = req.query;
+  const { destination_id, checkin, checkout, guests } = req.query;
   
   // Required fields
   if (!destination_id) {
@@ -78,16 +78,16 @@ const validateHotelSearch = (req, res, next) => {
       field: 'checkout'
     });
   }
-  
-  // Optional: Validate guests and rooms
-  const { guests, rooms } = req.query;
-  
+
   if (guests && (isNaN(guests) || parseInt(guests) < 1 || parseInt(guests) > 20)) {
     return res.status(400).json({ 
       error: 'Guests must be a number between 1 and 20',
       field: 'guests'
     });
   }
+  
+  // Optional: Validate guests and rooms
+  const { rooms } = req.query;
   
   if (rooms && (isNaN(rooms) || parseInt(rooms) < 1 || parseInt(rooms) > 10)) {
     return res.status(400).json({ 

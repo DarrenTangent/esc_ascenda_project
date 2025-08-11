@@ -6,11 +6,13 @@ const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const destinationRoutes = require('./routes/destinations'); // friends' route
-const bookingsRoute = require('./routes/bookings');          // your route
+const destinationRoutes = require('./routes/destinations');
+const bookingsRoute = require('./routes/bookings');
+const hotels = require('./routes/hotels');
+
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;   // Balraj changed this to 5000
 
 /* ---------- Security / infra ---------- */
 app.use(helmet());
@@ -95,6 +97,7 @@ app.get('/api/destinations/popular', (req, res) => {
 /* ---------- Real routes ---------- */
 app.use('/api/bookings', bookingsRoute);
 app.use('/api/destinations', destinationRoutes);
+app.use('/api/hotels', hotels);
 
 // Health
 app.get('/health', (req, res) => {
