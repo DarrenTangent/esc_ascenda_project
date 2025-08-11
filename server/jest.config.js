@@ -8,7 +8,7 @@ module.exports = {
 
   // Output & stability
   verbose: true,
-  runInBand: true,          // from your HEAD to avoid DB race conditions
+  
   testTimeout: 10000,       // from main
 
   // Coverage (from main)

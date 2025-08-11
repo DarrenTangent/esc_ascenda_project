@@ -10,9 +10,8 @@ const destinationRoutes = require('./routes/destinations');
 const bookingsRoute = require('./routes/bookings');
 const hotels = require('./routes/hotels');
 
-
 const app = express();
-const PORT = process.env.PORT || 5000;   // Balraj changed this to 5000
+const PORT = process.env.PORT || 5000;
 
 /* ---------- Security / infra ---------- */
 app.use(helmet());
@@ -51,39 +50,14 @@ app.use(express.urlencoded({ extended: true }));
 
 /* ---------- DB (OFF during tests) ---------- */
 if (process.env.NODE_ENV !== 'test') {
-  mongoose.connect('mongodb://localhost:27017/hotel-booking')
+  const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/hotel-booking';
+  mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.error(err));
 }
 
-/* ---------- Minimal stubs so existing tests pass ---------- */
-// GET /api/hotels/search — simple validator + stub
-app.get('/api/hotels/search', (req, res) => {
-  const { destination_id, checkin, checkout } = req.query;
-
-  if (!destination_id) {
-    return res.status(400).json({ error: 'Destination ID is required' });
-  }
-  if (checkin && checkout) {
-    const inDate = new Date(checkin);
-    const outDate = new Date(checkout);
-    if (Number.isNaN(inDate.getTime()) || Number.isNaN(outDate.getTime())) {
-      return res.status(400).json({ error: 'Invalid date format' });
-    }
-    if (outDate <= inDate) {
-      return res.status(400).json({ error: 'Check-out date must be after check-in date' });
-    }
-  }
-
-  return res.status(200).json({
-    hotels: [
-      { id: 'H1', name: 'Sample Hotel', destination_id },
-      { id: 'H2', name: 'Demo Inn', destination_id }
-    ]
-  });
-});
-
-// GET /api/destinations/popular — safe stub to avoid 500s if service isn’t wired
+/* ---------- Routes ---------- */
+// Keep this popular stub (used by tests)
 app.get('/api/destinations/popular', (req, res) => {
   const limit = parseInt(req.query.limit || '20', 10);
   const list = [
@@ -94,7 +68,7 @@ app.get('/api/destinations/popular', (req, res) => {
   res.json({ destinations: list, count: list.length });
 });
 
-/* ---------- Real routes ---------- */
+// Mount real routers (let hotels router handle /search and return paginatedHotels)
 app.use('/api/bookings', bookingsRoute);
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/hotels', hotels);

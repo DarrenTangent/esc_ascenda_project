@@ -46,6 +46,22 @@ router.post('/', async (req, res) => {
     console.log('POST /api/bookings CT:', req.headers['content-type']);
     console.log('POST /api/bookings BODY:', req.body);
 
+    // //  Simple injection guard (allows apostrophes in names; blocks SQL-y tokens)
+    // const sqlLike = /(--)|\/\*|\*\/|;|\bor\s*1\s*=\s*1\b|\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE|EXEC)\b/i;
+    // for (const [k, v] of Object.entries(req.body || {})) {
+    //   if (typeof v === 'string' && sqlLike.test(v)) {
+    //     return res.status(400).json({ error: `Invalid characters in ${k}` });
+    //   }
+    // }
+    // Simple SQL-ish guard (covers ' OR 1=1 -- and DROP/; etc.)
+    const sqli = /'|\bor\s*1\s*=\s*1\b|--|\/\*|\*\/|;|\b(select|insert|update|delete|drop|union|alter|create|exec)\b/i;
+    for (const [k, v] of Object.entries(req.body || {})) {
+      if (typeof v === 'string' && sqli.test(v)) {
+        return res.status(400).json({ error: `Invalid characters in ${k}` });
+      }
+    }
+
+
     const booking = new Booking(req.body);
     await booking.validate();              // triggers Mongoose validators
     await booking.save();
