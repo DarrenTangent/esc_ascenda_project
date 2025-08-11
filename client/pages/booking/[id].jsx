@@ -12,7 +12,7 @@ export default function BookingDetailsPage() {
 
   const API_BASE =
     (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')) ||
-    'http://localhost:5000';
+    'http://localhost:5001';
 
   useEffect(() => {
     if (!isReady || !id) return;

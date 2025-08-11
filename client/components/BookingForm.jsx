@@ -10,7 +10,7 @@ export default function BookingForm() {
   const [submitting, setSubmitting] = useState(false);
 
   const API_BASE =
-    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:5000';
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:5001';
 
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
