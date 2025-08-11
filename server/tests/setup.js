@@ -1,5 +1,8 @@
 // Jest setup file for DestinationService tests
 
+// Set test environment
+process.env.NODE_ENV = 'test';
+
 // Global test timeout
 jest.setTimeout(10000);
 

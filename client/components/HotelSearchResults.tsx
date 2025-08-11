@@ -25,7 +25,7 @@ interface HotelSearchResponse {
   pageSize: number;
   totalPages: number;
   totalHotels: number;
-  hotels: Hotel[];
+  paginatedHotels: Hotel[];
 }
 
 export default function HotelSearchResults() {
@@ -69,10 +69,21 @@ export default function HotelSearchResults() {
         
         const data: HotelSearchResponse = await res.json();
         console.log('API Response:', data);
+        console.log('paginatedHotels array:', data.paginatedHotels);
+        console.log('Is paginatedHotels an array?', Array.isArray(data.paginatedHotels));
+        console.log('paginatedHotels length:', data.paginatedHotels?.length);
         
         // Handle the new API response format
-        setHotels(Array.isArray(data.hotels) ? data.hotels : []);
+        setHotels(Array.isArray(data.paginatedHotels) ? data.paginatedHotels : []);
         setPagination({
+          page: data.page || 1,
+          totalPages: data.totalPages || 0,
+          totalHotels: data.totalHotels || 0,
+          pageSize: data.pageSize || 30
+        });
+        
+        console.log('Hotels set to:', Array.isArray(data.paginatedHotels) ? data.paginatedHotels.length : 'empty array');
+        console.log('Pagination set to:', {
           page: data.page || 1,
           totalPages: data.totalPages || 0,
           totalHotels: data.totalHotels || 0,
@@ -132,6 +143,16 @@ export default function HotelSearchResults() {
   if (hotels.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
+        {/* Debug info */}
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="font-bold text-blue-800">Debug - No Hotels Found:</h3>
+          <p className="text-sm text-blue-700">Hotels array length: {hotels.length}</p>
+          <p className="text-sm text-blue-700">Total hotels from API: {pagination.totalHotels}</p>
+          <p className="text-sm text-blue-700">Loading: {loading.toString()}</p>
+          <p className="text-sm text-blue-700">Error: {error || 'none'}</p>
+          <p className="text-sm text-blue-700">API URL: {API_BASE_URL}/hotels/search</p>
+          <p className="text-sm text-blue-700">Search params: {params?.toString()}</p>
+        </div>
         <div className="text-center py-12">
           <div className="text-gray-400 mb-4">
             <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">

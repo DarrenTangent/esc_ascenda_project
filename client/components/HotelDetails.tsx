@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useParams } from "next/navigation";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
 
@@ -15,6 +15,7 @@ const HotelDetails = () => {
     const [error, setError] = useState<string | null>(null);
 
     const searchParams = useSearchParams();
+    const params = useParams();
 
     // const rooms = [
     //     { id: 1, type: "Standard Room", price: "$120/night", guests: "2 guests" },
@@ -27,11 +28,12 @@ const HotelDetails = () => {
             setLoading(true);
             setError(null);
             
-            const hotelId = searchParams.get("id");
-            const destinationId = searchParams.get("destination_id");
-            const checkin = searchParams.get("checkin");
-            const checkout = searchParams.get("checkout");
-            const guests = searchParams.get("guests");
+            // Get hotel ID from route params instead of query params
+            const hotelId = params?.id as string;
+            const destinationId = searchParams?.get("destination_id");
+            const checkin = searchParams?.get("checkin");
+            const checkout = searchParams?.get("checkout");
+            const guests = searchParams?.get("guests");
 
             if (!hotelId || !destinationId || !checkin || !checkout || !guests) {
                 throw new Error("Missing required parameters");
@@ -52,18 +54,27 @@ const HotelDetails = () => {
             const data = await response.json();
             console.log('Hotel details response:', data);
             
-            setDetails(data.hotelDetails);
-            setRooms(data.rooms);
+            // The API returns the hotel details directly, not wrapped in hotelDetails
+            setDetails(data);
+            // setRooms(data.rooms); // This might not exist in the current API
 
+            // Check if we have image_details before processing
             const tempImgs = [];
-            for (let i = 0; i < 10; i++) {
-                tempImgs.push(`${data.hotelDetails.image_details.prefix}${i}${data.hotelDetails.image_details.suffix}`);
+            if (data.image_details) {
+                for (let i = 0; i < Math.min(10, data.imageCount || 10); i++) {
+                    tempImgs.push(`${data.image_details.prefix}${i}${data.image_details.suffix}`);
+                }
             }
             setImages(tempImgs);
             
+            // Check if we have amenities before processing
             const ams: String[] = [];
-            for (const key in data.hotelDetails.amenities) {
-                ams.push(key);
+            if (data.amenities) {
+                for (const key in data.amenities) {
+                    if (data.amenities[key]) { // Only include true amenities
+                        ams.push(key);
+                    }
+                }
             }
             setAmenities(ams);
         } 
