@@ -1,15 +1,24 @@
-import React from 'react'
+// components/HotelSearchInputFilter.tsx
+import React from 'react';
 
 interface HotelSearchInputFilter {
+  name: string;
   type: string;
   placeholder?: string;
-  name: string;
 }
 
-const HotelSearchInputFilter: React.FC<HotelSearchInputFilter>  = ({ name, type, placeholder }) => {
-    return (
-        <input name={name} type={type} min="0" max="99999" className={`rounded-xl border-gray-500 border-2 mx-2`} placeholder={placeholder}/>
-    )
-}
+const HotelSearchInputFilter: React.FC<HotelSearchInputFilter> = ({
+  name,
+  type,
+  placeholder,
+}) => (
+  <input
+    name={name}
+    type={type}
+    min="0"
+    placeholder={placeholder}
+    className="px-2 py-1 border rounded-md"
+  />
+);
 
-export default HotelSearchInputFilter
+export default HotelSearchInputFilter;

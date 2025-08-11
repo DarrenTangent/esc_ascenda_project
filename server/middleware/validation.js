@@ -51,23 +51,27 @@ const validateHotelSearch = (req, res, next) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
+  // Add 3 days minimum advance booking requirement per Ascenda docs
+  const minCheckinDate = new Date(today);
+  minCheckinDate.setDate(today.getDate() + 3);
+  
   if (isNaN(checkinDate.getTime())) {
     return res.status(400).json({ 
-      error: 'Invalid check-in date format',
+      error: 'Invalid check-in date format. Use YYYY-MM-DD',
       field: 'checkin'
     });
   }
   
   if (isNaN(checkoutDate.getTime())) {
     return res.status(400).json({ 
-      error: 'Invalid check-out date format',
+      error: 'Invalid check-out date format. Use YYYY-MM-DD',
       field: 'checkout'
     });
   }
   
-  if (checkinDate < today) {
+  if (checkinDate < minCheckinDate) {
     return res.status(400).json({ 
-      error: 'Check-in date cannot be in the past',
+      error: 'Check-in date must be at least 3 days in advance',
       field: 'checkin'
     });
   }
@@ -118,6 +122,7 @@ const validatePagination = (req, res, next) => {
   
   next();
 };
+
 
 const validateUserRegistration = (req, res, next) => {
   const { username, email, password, phoneNumber } = req.body;
@@ -194,6 +199,99 @@ const validateUserLogin = (req, res, next) => {
     });
   }
 
+
+const validateHotelId = (req, res, next) => {
+  const { id } = req.params;
+  
+  if (!id) {
+    return res.status(400).json({ 
+      error: 'Hotel ID is required',
+      field: 'id'
+    });
+  }
+  
+  if (typeof id !== 'string' || id.trim().length === 0) {
+    return res.status(400).json({ 
+      error: 'Hotel ID must be a non-empty string',
+      field: 'id'
+    });
+  }
+  
+  next();
+};
+
+const validateHotelPrice = (req, res, next) => {
+  const { id } = req.params;
+  const { destination_id, checkin, checkout } = req.query;
+  
+  // Validate hotel ID first
+  if (!id) {
+    return res.status(400).json({ 
+      error: 'Hotel ID is required',
+      field: 'id'
+    });
+  }
+  
+  // Required fields for price search
+  if (!destination_id) {
+    return res.status(400).json({ 
+      error: 'Destination ID is required',
+      field: 'destination_id'
+    });
+  }
+  
+  if (!checkin) {
+    return res.status(400).json({ 
+      error: 'Check-in date is required',
+      field: 'checkin'
+    });
+  }
+  
+  if (!checkout) {
+    return res.status(400).json({ 
+      error: 'Check-out date is required',
+      field: 'checkout'
+    });
+  }
+  
+  // Date validation
+  const checkinDate = new Date(checkin);
+  const checkoutDate = new Date(checkout);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Add 3 days minimum advance booking requirement per Ascenda docs
+  const minCheckinDate = new Date(today);
+  minCheckinDate.setDate(today.getDate() + 3);
+  
+  if (isNaN(checkinDate.getTime())) {
+    return res.status(400).json({ 
+      error: 'Invalid check-in date format. Use YYYY-MM-DD',
+      field: 'checkin'
+    });
+  }
+  
+  if (isNaN(checkoutDate.getTime())) {
+    return res.status(400).json({ 
+      error: 'Invalid check-out date format. Use YYYY-MM-DD',
+      field: 'checkout'
+    });
+  }
+  
+  if (checkinDate < minCheckinDate) {
+    return res.status(400).json({ 
+      error: 'Check-in date must be at least 3 days in advance',
+      field: 'checkin'
+    });
+  }
+  
+  if (checkoutDate <= checkinDate) {
+    return res.status(400).json({ 
+      error: 'Check-out date must be after check-in date',
+      field: 'checkout'
+    });
+  }
+  
   next();
 };
 
@@ -202,5 +300,8 @@ module.exports = {
   validateHotelSearch,
   validatePagination,
   validateUserRegistration,
-  validateUserLogin
+  validateUserLogin,
+  validateHotelId,
+  validateHotelPrice,
+  validatePagination
 };

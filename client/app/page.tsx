@@ -1,5 +1,7 @@
-import DestinationSearch from "@/components/DestinationSearch";
+// app/page.tsx
+'use client';
 import Link from "next/link";
+import DestinationSearch from '@/components/DestinationSearch';
 
 export default function Home() {
   return (
