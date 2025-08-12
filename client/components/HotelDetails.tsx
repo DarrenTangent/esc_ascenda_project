@@ -13,6 +13,7 @@ const HotelDetails = () => {
   const [rooms, setRooms] = useState<any[]>();
   const [images, setImages] = useState<any[]>();
   const [amenities, setAmenities] = useState<any[]>();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [pricing, setPricing] = useState<any>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,9 +81,11 @@ const HotelDetails = () => {
             ]);
           }
         } else {
+          console.warn('Price response not ok:', priceResponse.status, priceResponse.statusText);
           setRooms([]);
         }
-      } catch {
+      } catch (priceError) {
+        console.error('Error fetching hotel prices:', priceError);
         setRooms([]);
       }
 

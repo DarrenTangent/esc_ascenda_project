@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
 
 interface BookingInfo {
   bookingId: string;
@@ -19,7 +20,7 @@ interface BookingInfo {
   email: string;
   status: string;
   bookingDate: string;
-  roomDescription: string; // NEW
+  roomDescription: string;
 }
 
 export default function BookingConfirmationPage() {
@@ -42,12 +43,13 @@ export default function BookingConfirmationPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ bookingId, session_id: sessionId }),
           });
-        } catch { }
+        } catch {
+          /* ignore */
+        }
       }
     }
     verifyIfNeeded();
   }, [bookingId, sessionId]);
-
 
   useEffect(() => {
     if (!bookingId) {
@@ -62,7 +64,7 @@ export default function BookingConfirmationPage() {
         if (response.ok) {
           const bookingData = await response.json();
           setBooking({
-            bookingId: bookingData._id, // map _id -> bookingId for UI
+            bookingId: bookingData._id,
             hotelName: bookingData.hotelName,
             checkIn: bookingData.checkIn,
             checkOut: bookingData.checkOut,
@@ -75,7 +77,7 @@ export default function BookingConfirmationPage() {
             email: bookingData.email,
             status: bookingData.paid ? 'paid' : 'unpaid',
             bookingDate: bookingData.createdAt,
-            roomDescription: bookingData.roomDescription || 'N/A', // NEW
+            roomDescription: bookingData.roomDescription || 'N/A',
           });
         } else {
           setError('Booking not found');
@@ -91,41 +93,39 @@ export default function BookingConfirmationPage() {
     fetchBooking();
   }, [bookingId]);
 
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
-  };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-SG', {
-      style: 'currency',
-      currency: 'SGD'
-    }).format(price);
-  };
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(
+      price
+    );
 
   if (loading) {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div
-        role="status"
-        data-testid="spinner"
-        className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"
-      />
-    </div>
-  );
-}
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div
+          role="status"
+          data-testid="spinner"
+          className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"
+        />
+      </div>
+    );
+  }
 
   if (error || !booking) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
-            <h2 className="text-2xl font-bold text-red-900 mb-4">Booking Error</h2>
+            <h2 className="text-2xl font-bold text-red-900 mb-4">
+              Booking Error
+            </h2>
             <p className="text-red-600 mb-4">{error || 'Booking not found'}</p>
             <button
               onClick={() => router.push('/')}
@@ -145,12 +145,26 @@ export default function BookingConfirmationPage() {
         {/* Success Header */}
         <div className="text-center mb-8">
           <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <svg
+              className="w-8 h-8 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Booking Confirmed!</h1>
-          <p className="text-lg text-gray-600">Your reservation has been successfully processed.</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Booking Confirmed!
+          </h1>
+          <p className="text-lg text-gray-600">
+            Your reservation has been successfully processed.
+          </p>
         </div>
 
         {/* Booking Details Card */}
@@ -165,20 +179,30 @@ export default function BookingConfirmationPage() {
           <div className="px-6 py-6">
             {/* Hotel Information */}
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Hotel Details</h3>
-              <p className="text-xl font-medium text-gray-800">{booking.hotelName}</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Hotel Details
+              </h3>
+              <p className="text-xl font-medium text-gray-800">
+                {booking.hotelName}
+              </p>
             </div>
 
             {/* Guest Information */}
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-black mb-2">Guest Information</h3>
-              <p className="text-black">{booking.firstName} {booking.lastName}</p>
+              <h3 className="text-lg font-semibold text-black mb-2">
+                Guest Information
+              </h3>
+              <p className="text-black">
+                {booking.firstName} {booking.lastName}
+              </p>
               <p className="text-black">{booking.email}</p>
             </div>
 
             {/* Stay Details */}
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Stay Details</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Stay Details
+              </h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p style={{ color: 'black' }}>Check-in</p>
@@ -213,23 +237,27 @@ export default function BookingConfirmationPage() {
               </div>
             </div>
 
-
             {/* Pricing */}
             <div className="border-t pt-4 mb-6">
               <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-gray-900">Total Amount</span>
+                <span className="text-lg font-semibold text-gray-900">
+                  Total Amount
+                </span>
                 <span className="text-2xl font-bold text-indigo-600">
                   {formatPrice(booking.totalPrice)}
                 </span>
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                Payment processed on {new Date(booking.bookingDate).toLocaleDateString()}
+                Payment processed on{' '}
+                {new Date(booking.bookingDate).toLocaleDateString()}
               </p>
             </div>
 
             {/* Important Information */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h4 className="font-medium text-blue-900 mb-2">Important Information</h4>
+              <h4 className="font-medium text-blue-900 mb-2">
+                Important Information
+              </h4>
               <ul className="text-sm text-blue-700 space-y-1">
                 <li>• Please bring a valid ID and this confirmation for check-in</li>
                 <li>• Check-in time is typically 3:00 PM, check-out is 11:00 AM</li>
