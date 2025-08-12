@@ -1,6 +1,7 @@
 
 
 
+// module.exports = router;
 const express = require('express');
 const router = express.Router();
 const Booking = require('../models/Booking');
@@ -23,14 +24,19 @@ router.post('/', async (req, res) => {
 
     // Strip raw card, keep last4 + meta
     const {
-      cardNumber, expiry, cvv,
-      paymentIntentId, cardBrand,
+      cardNumber,
+      expiry,
+      cvv,
+      paymentIntentId,
+      cardBrand,
+      roomDescription, // ✅ Added here
       ...rest
     } = req.body;
 
-    const cardLast4 = typeof cardNumber === 'string'
-      ? cardNumber.replace(/[\s-]/g, '').slice(-4)
-      : undefined;
+    const cardLast4 =
+      typeof cardNumber === 'string'
+        ? cardNumber.replace(/[\s-]/g, '').slice(-4)
+        : undefined;
 
     const booking = new Booking({
       ...rest,
@@ -44,14 +50,20 @@ router.post('/', async (req, res) => {
       cardBrand,
       cardLast4,
       paid: !!paymentIntentId,
+      roomDescription, // ✅ Now correctly set from req.body
     });
-
 
     await booking.validate();
     await booking.save();
 
-    // Fire-and-forget email (don’t fail request on email error)
-    sendBookingConfirmation(booking.email, booking).catch(() => {});
+    // Replace this with your actual frontend base URL
+const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+
+// Build the confirmation page link with bookingId
+const confirmationUrl = `${frontendBaseUrl}/booking/confirmation?bookingId=${booking._id}`;
+
+// Fire-and-forget email (don’t fail request on email error)
+sendBookingConfirmation(booking.email, booking, confirmationUrl).catch(() => {});
 
     res.status(201).json({ message: 'Booking created', booking });
   } catch (err) {
@@ -62,6 +74,7 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: 'Failed to save booking' });
   }
 });
+
 // GET /api/bookings/:id
 router.get('/:id', async (req, res) => {
   try {
@@ -75,6 +88,5 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Server error, please try again later' });
   }
 });
-
 
 module.exports = router;

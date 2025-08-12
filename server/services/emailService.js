@@ -21,23 +21,28 @@ async function buildTransport() {
   });
 }
 
-exports.sendBookingConfirmation = async (to, booking) => {
+exports.sendBookingConfirmation = async (to, booking, confirmationUrl) => {
   try {
     const transporter = await buildTransport();
     const from = process.env.SMTP_FROM || 'Bookings <no-reply@example.com>';
 
+    const htmlContent = `
+      <h2>Thanks for your booking!</h2>
+      <p>Booking ID: <b>${booking._id}</b></p>
+      <p>Hotel: ${booking.hotelName || '-'}</p>
+      <p>Address: ${booking.hotelAddress || '-'}</p>
+      <p>Dates: ${booking.checkIn || '?'} → ${booking.checkOut || '?'}</p>
+      <p>Guests/Rooms: ${booking.guests || '-'} / ${booking.rooms || '-'}</p>
+      <p>Total: ${booking.totalPrice ? 'SGD ' + booking.totalPrice : '-'}</p>
+      <p>You can view your booking details anytime here:</p>
+      <a href="${confirmationUrl}" style="color: blue;">View Booking Confirmation</a>
+    `;
+
     const info = await transporter.sendMail({
-      from, to,
+      from,
+      to,
       subject: `Booking Confirmation #${booking._id}`,
-      html: `
-        <h2>Thanks for your booking!</h2>
-        <p>Booking ID: <b>${booking._id}</b></p>
-        <p>Hotel: ${booking.hotelName || '-'}</p>
-        <p>Address: ${booking.hotelAddress || '-'}</p>
-        <p>Dates: ${booking.checkIn || '?'} → ${booking.checkOut || '?'}</p>
-        <p>Guests/Rooms: ${booking.guests || '-'} / ${booking.rooms || '-'}</p>
-        <p>Total: ${booking.totalPrice ? 'SGD ' + booking.totalPrice : '-'}</p>
-      `
+      html: htmlContent
     });
 
     const preview = nodemailer.getTestMessageUrl?.(info);

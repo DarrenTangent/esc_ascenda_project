@@ -1,39 +1,3 @@
-// // server/routes/payments.js
-// const express = require('express');
-// const router = express.Router();
-// require('dotenv').config();
-// const stripe = require('stripe')(process.env.STRIPE_SECRET);
-
-// router.post('/create-checkout-session', async (req, res) => {
-//   try {
-//     const { amount, hotelName, email, bookingId } = req.body;
-//     if (!bookingId) return res.status(400).json({ error: 'Missing bookingId' });
-
-//     const session = await stripe.checkout.sessions.create({
-//       mode: 'payment',
-//       payment_method_types: ['card'],
-//       customer_email: email,
-//       line_items: [
-//         {
-//           price_data: {
-//             currency: 'sgd',
-//             product_data: { name: hotelName || 'Hotel Booking' },
-//             unit_amount: amount, // cents
-//           },
-//           quantity: 1,
-//         },
-//       ],
-//       metadata: { bookingId },
-//       success_url: `${process.env.CLIENT_URL}/booking/confirmation?bookingId=${encodeURIComponent(bookingId)}`,
-//       cancel_url: `${process.env.CLIENT_URL}/booking/cancelled`,
-//     });
-
-//     res.json({ url: session.url });
-//   } catch (err) {
-//     console.error('Stripe error:', err);
-//     res.status(500).json({ error: 'Failed to create checkout session' });
-//   }
-// });
 
 // module.exports = router;
 const express = require('express');
