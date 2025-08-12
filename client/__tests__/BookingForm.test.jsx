@@ -2,9 +2,36 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import BookingForm from '../components/BookingForm';
-import { useRouter } from 'next/router';
 
-jest.mock('next/router', () => ({ useRouter: jest.fn() }));
+// Mock Next.js navigation hooks for App Router
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(),
+  useParams: jest.fn(),
+  useSearchParams: jest.fn(),
+}));
+
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
+
+const mockRouter = {
+  push: jest.fn(),
+};
+
+const mockParams = {
+  id: 'hotel123',
+};
+
+const mockSearchParams = {
+  get: jest.fn((key) => {
+    const params = {
+      destination_id: '1234',
+      checkin: '2024-01-01',
+      checkout: '2024-01-03',
+      guests: '2',
+      rooms: '1',
+    };
+    return params[key] || null;
+  }),
+};
 
 const fillForm = (overrides = {}) => {
   const vals = {
@@ -28,41 +55,131 @@ describe('BookingForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     window.alert = jest.fn();
-    useRouter.mockReturnValue({ push: jest.fn() });
+    
+    // Setup mocks
+    useRouter.mockReturnValue(mockRouter);
+    useParams.mockReturnValue(mockParams);
+    useSearchParams.mockReturnValue(mockSearchParams);
+    
+    // Mock hotel API calls
+    global.fetch = jest.fn();
   });
 
-  test('renders inputs + submit', () => {
+  test('renders inputs + submit', async () => {
+    // Mock successful hotel data fetch
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        id: 'hotel123',
+        name: 'Test Hotel',
+        address: 'Test Address'
+      })
+    }).mockResolvedValueOnce({
+      ok: true, 
+      json: () => Promise.resolve({
+        rooms: [{ booking_key: 'test', description: 'Standard Room', price: 100 }]
+      })
+    });
+
     render(<BookingForm />);
-    ['First Name','Last Name','Email','Phone','Special Requests','Card Number','MM/YY','CVV','Billing Address']
-      .forEach(ph => expect(screen.getByPlaceholderText(ph)).toBeInTheDocument());
+    
+    // Wait for loading to complete
+    await waitFor(() => {
+      ['First Name','Last Name','Email','Phone','Special Requests','Card Number','MM/YY','CVV','Billing Address']
+        .forEach(ph => expect(screen.getByPlaceholderText(ph)).toBeInTheDocument());
+    });
+    
     expect(screen.getByRole('button', { name: /book now/i })).toBeInTheDocument();
   });
 
-  test('alerts when required fields missing', () => {
+  test('alerts when required fields missing', async () => {
+    // Mock successful hotel data fetch
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        id: 'hotel123',
+        name: 'Test Hotel',
+        address: 'Test Address'
+      })
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        rooms: [{ booking_key: 'test', description: 'Standard Room', price: 100 }]
+      })
+    });
+
     render(<BookingForm />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /book now/i })).toBeInTheDocument();
+    });
+    
     fireEvent.click(screen.getByRole('button', { name: /book now/i }));
     expect(window.alert).toHaveBeenCalledWith('Please fill in all required fields.');
   });
 
-  test('alerts when email invalid', () => {
+  test('alerts when email invalid', async () => {
+    // Mock successful hotel data fetch
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        id: 'hotel123',
+        name: 'Test Hotel',
+        address: 'Test Address'
+      })
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        rooms: [{ booking_key: 'test', description: 'Standard Room', price: 100 }]
+      })
+    });
+
     render(<BookingForm />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('First Name')).toBeInTheDocument();
+    });
+    
     fillForm({ email: 'bad' });
     fireEvent.click(screen.getByRole('button', { name: /book now/i }));
     expect(window.alert).toHaveBeenCalledWith('Please enter a valid email address.');
   });
 
-  test('redirects to /booking/[id] on success', async () => {
+  test('redirects to /booking/details/[id] on success', async () => {
     const push = jest.fn();
     useRouter.mockReturnValue({ push });
-    global.fetch = jest.fn(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ booking: { _id: '123abc' } }) })
-    );
+    
+    // Mock hotel data fetch
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        id: 'hotel123',
+        name: 'Test Hotel',
+        address: 'Test Address'
+      })
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        rooms: [{ booking_key: 'test', description: 'Standard Room', price: 100 }]
+      })
+    }).mockResolvedValueOnce({
+      ok: true, 
+      json: () => Promise.resolve({ booking: { _id: '123abc' } })
+    });
 
     render(<BookingForm />);
+    
+    // Wait for form to load
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('First Name')).toBeInTheDocument();
+    });
+    
     fillForm();
     fireEvent.click(screen.getByRole('button', { name: /book now/i }));
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith('/booking/123abc'));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/booking/details/123abc'));
     expect(window.alert).not.toHaveBeenCalledWith('Booking submitted');
   });
 });

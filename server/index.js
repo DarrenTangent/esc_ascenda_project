@@ -30,7 +30,10 @@ if (process.env.NODE_ENV !== 'test') {
 
 // CORS
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:3000',
+    'http://localhost:3001' // Allow both ports since Next.js might use 3001 if 3000 is busy
+  ],
   credentials: true
 }));
 
@@ -38,11 +41,14 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// DB connect (skip in tests)
+// DB connect (skip in tests and if MongoDB is not available)
 if (process.env.NODE_ENV !== 'test') {
   mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/hotel-booking')
     .then(() => console.log('MongoDB connected'))
-    .catch(err => console.error(err));
+    .catch(err => {
+      console.warn('MongoDB connection failed:', err.message);
+      console.log('Continuing without MongoDB - some features may be limited');
+    });
 }
 
 // Routes
