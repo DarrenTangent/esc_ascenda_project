@@ -13,6 +13,7 @@ const HotelDetails = () => {
   const [rooms, setRooms] = useState<any[]>();
   const [images, setImages] = useState<any[]>();
   const [amenities, setAmenities] = useState<any[]>();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [pricing, setPricing] = useState<any>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
