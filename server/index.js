@@ -11,6 +11,8 @@ const destinationRoutes = require('./routes/destinations');
 const hotels = require('./routes/hotels');
 const bookingsRoute = require('./routes/bookings'); // <-- needed
 
+console.log('Routes loaded successfully');
+
 const app = express();
 const PORT = process.env.PORT || 5001; // team standard
 
@@ -62,6 +64,10 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Routes
+app.get('/test', (req, res) => {
+  res.json({ message: 'Basic routing works!', timestamp: new Date().toISOString() });
+});
+
 app.use('/api/bookings', bookingsRoute);
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/hotels', hotels);
