@@ -9,12 +9,13 @@ const SLIDE_INTERVAL_MS = 4000;
 
 // Use high-res assets in /public/hero/
 const SLIDES = [
-  '/hero.jpg',                 // your existing image
-  '/bali.jpg',
-  '/tokyo.jpg',
-  '/china.jpg',
-  '/SG.jpg',
-  '/paris.jpg',
+  '/bg/hero.jpg',                 // your existing image
+  '/bg/bali.jpg',
+  '/bg/tokyo.jpg',
+  '/bg/china.jpg',
+  '/bg/SG.jpg',
+  '/bg/paris.jpg',
+  '/bg/rando.jpg',
 ];
 
 export default function HeroWithSearch() {
