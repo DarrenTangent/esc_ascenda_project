@@ -1,4 +1,4 @@
-
+git 
 // client/utils/stripeCheckout.js
 export async function startStripeCheckout({ amount, hotelName, email, bookingId }) {
   const res = await fetch('http://localhost:5001/api/payments/create-checkout-session', {
