@@ -1,3 +1,6 @@
+
+
+// module.exports = new HotelService();
 const NodeCache = require("node-cache");
 const axios = require('axios');
 const fs = require('fs');
