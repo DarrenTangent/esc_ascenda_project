@@ -284,7 +284,7 @@ class HotelService {
             return cachedData;
         }
 
-        const url = `${this.baseApiUrl}/hotels/${hotelId}/prices`;
+        const url = `${this.baseApiUrl}/hotels/${hotelId}/price`;
         const params = {
             destination_id: destination,
             checkin: checkin,
