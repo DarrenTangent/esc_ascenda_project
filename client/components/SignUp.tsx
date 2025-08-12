@@ -3,8 +3,10 @@
 /* eslint-disable react/no-unescaped-entities */
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 const SignUp = () => {
+    const router = useRouter();
     const [formData, setFormData] = useState({
         username: '',
         email: '',
@@ -143,7 +145,7 @@ const SignUp = () => {
                 <p className="mt-2 text-center text-sm text-gray-600">
                     Already have an account?{' '}
                     <button
-                        onClick={() => alert('Navigate to login page')}
+                        onClick={() => router.push('/auth/login')}
                         className="font-medium text-indigo-600 hover:text-indigo-500 bg-transparent border-none underline cursor-pointer"
                     >
                         Sign in

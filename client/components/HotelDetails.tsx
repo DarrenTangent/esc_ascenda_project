@@ -81,9 +81,11 @@ const HotelDetails = () => {
             ]);
           }
         } else {
+          console.warn('Price response not ok:', priceResponse.status, priceResponse.statusText);
           setRooms([]);
         }
-      } catch {
+      } catch (priceError) {
+        console.error('Error fetching hotel prices:', priceError);
         setRooms([]);
       }
 
