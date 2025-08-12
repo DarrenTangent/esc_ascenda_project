@@ -64,12 +64,12 @@ export default function HotelSearchResults() {
       setError(null);
       
       try {
-        console.log('Fetching hotels with params:', params.toString());
+        console.log('Fetching hotels with params:', (params ?? new URLSearchParams()).toString());
         console.log('API_BASE_URL:', API_BASE_URL);
-        console.log('Full URL:', `${API_BASE_URL}/hotels/search?${params.toString()}`);
+        console.log('Full URL:', `${API_BASE_URL}/hotels/search?${(params ?? new URLSearchParams()).toString()}`);
         
         const res = await fetch(
-          `${API_BASE_URL}/hotels/search?${params.toString()}`,
+          `${API_BASE_URL}/hotels/search?${(params ?? new URLSearchParams()).toString()}`,
           {
             method: 'GET',
             headers: {
@@ -249,14 +249,13 @@ export default function HotelSearchResults() {
           {pagination.totalHotels} hotels • Showing {filteredHotels.length} after filters
         </p>
       </div>
-
-      {/* Filter Controls */}
-      <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Filter & Sort</h3>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="text-indigo-600 hover:text-indigo-800 font-medium"
+      {/* Hotel Results Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {hotels.map((hotel) => (
+          <div
+            key={hotel.id}
+            onClick={() => router.push(`/hotel/${hotel.id}?${(params ?? new URLSearchParams()).toString()}`)}
+            className="cursor-pointer transform hover:scale-105 transition-transform duration-200"
           >
             {showFilters ? 'Hide Filters' : 'Show Filters'}
           </button>
@@ -374,8 +373,8 @@ export default function HotelSearchResults() {
         <div className="flex justify-center items-center space-x-4">
           <button
             onClick={() => {
-              if (pagination.page > 1 && params) {
-                const newParams = new URLSearchParams(params.toString());
+              if (pagination.page > 1) {
+                const newParams = new URLSearchParams((params ?? new URLSearchParams()).toString());
                 newParams.set('page', String(pagination.page - 1));
                 router.push(`/search?${newParams.toString()}`);
               }
@@ -392,8 +391,8 @@ export default function HotelSearchResults() {
           
           <button
             onClick={() => {
-              if (pagination.page < pagination.totalPages && params) {
-                const newParams = new URLSearchParams(params.toString());
+              if (pagination.page < pagination.totalPages) {
+                const newParams = new URLSearchParams((params ?? new URLSearchParams()).toString());
                 newParams.set('page', String(pagination.page + 1));
                 router.push(`/search?${newParams.toString()}`);
               }

@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
@@ -30,12 +31,17 @@ const HotelDetails = () => {
             setLoading(true);
             setError(null);
             
-            // Get hotel ID from route params instead of query params
-            const hotelId = params?.id as string;
-            const destinationId = searchParams?.get("destination_id");
-            const checkin = searchParams?.get("checkin");
-            const checkout = searchParams?.get("checkout");
-            const guests = searchParams?.get("guests");
+   if (!searchParams) {
+                throw new Error("Search parameters are not available");
+            }
+            
+            // Get hotel ID from query params
+            const hotelId = searchParams!.get("id");
+            const destinationId = searchParams!.get("destination_id");
+            const checkin = searchParams!.get("checkin");
+            const checkout = searchParams!.get("checkout");
+            const guests = searchParams!.get("guests");
+
 
             if (!hotelId || !destinationId || !checkin || !checkout || !guests) {
                 throw new Error("Missing required parameters");
@@ -104,14 +110,9 @@ const HotelDetails = () => {
             }
             setImages(tempImgs);
             
-            // Check if we have amenities before processing
-            const ams: String[] = [];
-            if (data.amenities) {
-                for (const key in data.amenities) {
-                    if (data.amenities[key]) { // Only include true amenities
-                        ams.push(key);
-                    }
-                }
+            const ams: string[] = [];
+            for (const key in data.hotelDetails.amenities) {
+                ams.push(key);
             }
             setAmenities(ams);
         } 
