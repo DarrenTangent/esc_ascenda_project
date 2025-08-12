@@ -1,16 +1,33 @@
+
+
+// module.exports = mongoose.model('Booking', BookingSchema);
 const mongoose = require('mongoose');
 
 const BookingSchema = new mongoose.Schema({
+  // Guest
   firstName: { type: String, required: true, trim: true },
   lastName:  { type: String, required: true, trim: true },
   email:     { type: String, required: true, match: /\S+@\S+\.\S+/ },
   phone:     { type: String, required: true },
   specialRequests: String,
-  cardNumber: { type: String, required: true, match: /^\d{13,19}$/ }, // basic check
-  expiry:     { type: String, required: true, match: /^(0[1-9]|1[0-2])\/\d{2}$/ },
-  cvv:        { type: String, required: true, match: /^\d{3,4}$/ },
   billingAddress: { type: String, required: true },
-  createdAt:  { type: Date, default: Date.now }
-});
+
+  // Hotel / stay
+  hotelId: String,
+  hotelName: String,
+  hotelAddress: String,
+  checkIn: { type: Date },
+  checkOut: { type: Date },
+  nights: Number,
+  guests: String,
+  rooms: String,
+  totalPrice: Number,
+
+  // Payment
+  paymentIntentId: String,
+  cardLast4: String,
+  cardBrand: String,
+  paid: { type: Boolean, default: false },
+}, { timestamps: true });
 
 module.exports = mongoose.model('Booking', BookingSchema);

@@ -14,6 +14,10 @@ const bookingsRoute = require('./routes/bookings'); // <-- needed
 const app = express();
 const PORT = process.env.PORT || 5001; // team standard
 
+// Payments
+const paymentsRoute = require('./routes/payments');  // top with other routes
+
+
 // Security / infra
 app.use(helmet());
 app.use(compression());
@@ -52,6 +56,9 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Routes
+app.use('/api/payments', paymentsRoute);             // before other app.use routes
+
+
 app.use('/api/bookings', bookingsRoute);
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/hotels', hotels);

@@ -30,33 +30,65 @@ export default function BookingConfirmationPage() {
   const [error, setError] = useState<string | null>(null);
 
   const bookingId = searchParams?.get('bookingId');
+  const sessionId = searchParams?.get('session_id');
 
   useEffect(() => {
-    if (!bookingId) {
-      setError('No booking ID provided');
-      setLoading(false);
-      return;
-    }
-
-    async function fetchBooking() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
-        if (response.ok) {
-          const bookingData = await response.json();
-          setBooking(bookingData);
-        } else {
-          setError('Booking not found');
-        }
-      } catch (err) {
-        console.error('Error fetching booking:', err);
-        setError('Failed to load booking details');
-      } finally {
-        setLoading(false);
+    async function verifyIfNeeded() {
+      if (bookingId && sessionId) {
+        try {
+          await fetch(`${API_BASE_URL}/payments/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bookingId, session_id: sessionId }),
+          });
+        } catch {}
       }
     }
+    verifyIfNeeded();
+  }, [bookingId, sessionId]);
 
-    fetchBooking();
-  }, [bookingId]);
+
+  useEffect(() => {
+  if (!bookingId) {
+    setError('No booking ID provided');
+    setLoading(false);
+    return;
+  }
+
+  async function fetchBooking() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
+      if (response.ok) {
+        const bookingData = await response.json();
+        setBooking({
+          bookingId: bookingData._id, // map _id -> bookingId for UI
+          hotelName: bookingData.hotelName,
+          checkIn: bookingData.checkIn,
+          checkOut: bookingData.checkOut,
+          guests: bookingData.guests,
+          rooms: bookingData.rooms,
+          totalPrice: bookingData.totalPrice,
+          nights: bookingData.nights,
+          firstName: bookingData.firstName,
+          lastName: bookingData.lastName,
+          email: bookingData.email,
+          status: bookingData.paid ? 'paid' : 'unpaid',
+          bookingDate: bookingData.createdAt,
+        });
+      } else {
+        setError('Booking not found');
+      }
+    } catch (err) {
+      console.error('Error fetching booking:', err);
+      setError('Failed to load booking details');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  fetchBooking();
+}, [bookingId]);
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
