@@ -29,6 +29,13 @@ export default function HotelSearchResults() {
   const [totalHotels, setTotalHotels] = useState<number>(0);
   const [filters, setFilters] = useState<Filters>(initialFilters);
 
+  const [pagination, setPagination] = useState({
+    page: 1,
+    totalPages: 0,
+    totalHotels: 0,
+    pageSize: 30,
+  });
+
   // build API URL from current query string (already includes filters when we sync)
   const qs = useMemo(() => (params ?? new URLSearchParams()).toString(), [params]);
   const fetchUrl = `${API_BASE_URL}/hotels/search?${qs}`;
@@ -58,6 +65,12 @@ export default function HotelSearchResults() {
         
         setRawHotels(transformedHotels);
         setTotalHotels(typeof data?.totalHotels === 'number' ? data.totalHotels : transformedHotels.length);
+        setPagination({
+          page: data.page || 1,
+          totalPages: data.totalPages || 0,
+          totalHotels: data.totalHotels || 0,
+          pageSize: data.pageSize || 30,
+        });
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load hotels');
         setRawHotels([]);
@@ -105,7 +118,7 @@ export default function HotelSearchResults() {
     }
 
     // reset to page 1 whenever filters change
-    p.delete('page');
+    // p.delete('page');
 
     router.push(`/search?${p.toString()}`);
   };
@@ -210,6 +223,41 @@ export default function HotelSearchResults() {
           );
         })}
       </div>
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center items-center space-x-4">
+          <button
+            onClick={() => {
+              if (pagination.page > 1) {
+                const q = new URLSearchParams(params?.toString() || '');
+                q.set('page', String(pagination.page - 1));
+                router.push(`/search?${q.toString()}`);
+              }
+            }}
+            disabled={pagination.page <= 1}
+            className="px-6 py-3 border-2 border-indigo-600 text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 disabled:opacity-50"
+          >
+            ← Previous
+          </button>
+          <span className="text-gray-800 font-semibold text-lg">
+            Page {pagination.page} of {pagination.totalPages}
+          </span>
+          <button
+            onClick={() => {
+              if (pagination.page < pagination.totalPages) {
+                const q = new URLSearchParams(params?.toString() || '');
+                q.set('page', String(pagination.page + 1));
+                router.push(`/search?${q.toString()}`);
+              }
+            }}
+            disabled={pagination.page >= pagination.totalPages}
+            className="px-6 py-3 border-2 border-indigo-600 text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 disabled:opacity-50"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </main>
   );
 }
