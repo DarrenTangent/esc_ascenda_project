@@ -247,21 +247,18 @@ function HotelPageContent() {
     }
 
     const q = new URLSearchParams({
-      hotel_id: data?.id ?? '',
+      destination_id: destinationId,
       checkin: dates.checkin,
       checkout: dates.checkout,
       rooms: String(rooms),
       guests: String(guests),
       room_key: selectedRoom.key,
-      room_description: selectedRoom.roomDescription,
+      room_desc: selectedRoom.roomDescription, // Use room_desc instead of room_description
       room_price: selectedRoom.price,
     });
     
-    if (destinationId) {
-      q.set('destination_id', destinationId);
-    }
-    
-    router.push(`/booking?${q.toString()}`);
+    // Navigate to the booking form with hotel ID
+    router.push(`/booking/${data?.id}?${q.toString()}`);
   };
 
   if (loading) {
@@ -538,7 +535,7 @@ function HotelPageContent() {
                 : 'bg-indigo-600 text-white hover:bg-indigo-700'
             }`}
           >
-            {roomOffers.length > 0 && !selectedRoom ? 'Select a room first' : 'Book now'}
+            {roomOffers.length > 0 && !selectedRoom ? 'Select a room first' : 'Continue to Booking'}
           </button>
 
           <p className="mt-2 text-xs text-neutral-500">
