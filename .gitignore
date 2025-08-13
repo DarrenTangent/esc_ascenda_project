@@ -1,7 +1,5 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
-/node_modules
+**/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -11,27 +9,29 @@
 !.yarn/versions
 
 # testing
-/coverage
+**/coverage
 
 # next.js
-/.next/
-/out/
+**/.next/
+**/out/
 
-# production
-/build
+# production builds
+**/build
+**/dist
 
 # misc
 .DS_Store
 *.pem
 
-# debug
+# debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (do not commit)
 .env*
+!**/.env.example   # keep templates
 
 # vercel
 .vercel
@@ -42,3 +42,6 @@ next-env.d.ts
 
 # fuzzing
 /fuzzer/.hypothesis
+
+# ignore ONLY the root lockfile; keep client/server ones
+/package-lock.json

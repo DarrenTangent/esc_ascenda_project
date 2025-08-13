@@ -1,3 +1,6 @@
+
+
+// module.exports = new HotelService();
 const NodeCache = require("node-cache");
 const axios = require('axios');
 const fs = require('fs');
@@ -281,10 +284,11 @@ class HotelService {
         const cachedData = this.myCache.get(cacheKey);
         
         if (cachedData) {
+            console.log('Using cached price data for hotel:', hotelId);
             return cachedData;
         }
 
-        const url = `${this.baseApiUrl}/hotels/${hotelId}/prices`;
+        const url = `${this.baseApiUrl}/hotels/${hotelId}/price`;
         const params = {
             destination_id: destination,
             checkin: checkin,
@@ -298,21 +302,66 @@ class HotelService {
             product_type: 'earn'
         };
 
-        try {
-            const response = await axios.get(url, { 
-                params,
-                timeout: 15000
-            });
-            
-            if (response.data) {
-                this.myCache.set(cacheKey, response.data);
-                return response.data;
+        // Retry logic for incomplete responses
+        for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+            try {
+                console.log(`>>> PRICE API CALL (Attempt ${attempt}/${this.maxRetries}) >>>)`);
+                console.log('URL:', url);
+                console.log('Params:', params);
+                console.log('Cache key:', cacheKey);
+                
+                const response = await axios.get(url, { 
+                    params,
+                    timeout: 15000
+                });
+                
+                console.log('API Response status:', response.status);
+                console.log('API Response data keys:', response.data ? Object.keys(response.data) : 'NO DATA');
+                console.log('Full API Response data:', JSON.stringify(response.data, null, 2));
+                
+                // Check if response is complete and has rooms
+                if (response.data && response.data.completed === true && response.data.rooms && response.data.rooms.length > 0) {
+                    console.log(`✅ Complete response received with ${response.data.rooms.length} rooms`);
+                    this.myCache.set(cacheKey, response.data);
+                    console.log('>>> PRICE API SUCCESS >>>');
+                    return response.data;
+                } else if (response.data && !this.requireCompleted) {
+                    // Accept incomplete data if flag is disabled
+                    console.log('⚠️ Accepting incomplete response (requireCompleted = false)');
+                    this.myCache.set(cacheKey, response.data);
+                    return response.data;
+                } else if (response.data && response.data.completed === false) {
+                    console.log(`⏳ Attempt ${attempt}: Price API response not yet completed, retrying...`);
+                } else {
+                    console.log(`⏳ Attempt ${attempt}: No valid price data in response, retrying...`);
+                }
+
+                // Don't retry on the last attempt
+                if (attempt < this.maxRetries) {
+                    console.log(`⏳ Attempt ${attempt} incomplete, retrying in ${this.retryDelay}ms...`);
+                    await this.delay(this.retryDelay);
+                }
+
+            } catch (error) {
+                console.error(`>>> PRICE API ERROR (Attempt ${attempt}) >>>`);
+                console.error('URL that failed:', url);
+                console.error('Error status:', error.response?.status);
+                console.error('Error message:', error.message);
+                console.error('Error response data:', error.response?.data);
+                
+                // Don't retry on the last attempt
+                if (attempt < this.maxRetries) {
+                    console.log(`💥 Error on attempt ${attempt}, retrying in ${this.retryDelay}ms...`);
+                    await this.delay(this.retryDelay);
+                } else {
+                    console.error('>>> PRICE API FINAL ERROR >>>');
+                    return null;
+                }
             }
-            return null;
-        } catch (error) {
-            console.error(`Error fetching price for hotel ${hotelId}:`, error.message);
-            return null;
         }
+
+        console.log(`❌ Max retries (${this.maxRetries}) exceeded for hotel price: ${hotelId}`);
+        return null;
     }
 
     delay(ms) {

@@ -2,12 +2,160 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useParams, useRouter } from 'next/navigation';
 
-export default function HotelDetailsView({ details, images, rooms, onReload }: {
-  details: any; images: string[]; rooms: any[]; onReload?: () => void;
-}) {
-  if (!details) return null;
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
 
+const HotelDetails = () => {
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [details, setDetails] = useState<any>();
+  const [rooms, setRooms] = useState<any[]>();
+  const [images, setImages] = useState<any[]>();
+  const [amenities, setAmenities] = useState<any[]>();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [pricing, setPricing] = useState<any>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  const params = useParams();
+  const router = useRouter();
+
+  const getData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!searchParams) throw new Error('Search parameters are not available');
+
+      // `/hotel/[id]` -> params.id
+      const hotelId = String((params as any)?.id || '');
+
+      // rest from query
+      const destinationId = searchParams?.get('destination_id') ?? '';
+      const checkin = searchParams?.get('checkin') ?? '';
+      const checkout = searchParams?.get('checkout') ?? '';
+      const guests = searchParams?.get('guests') ?? '1';
+
+      if (!hotelId || !destinationId || !checkin || !checkout || !guests) {
+        throw new Error('Missing required parameters');
+      }
+
+      const url = `${API_BASE_URL}/hotels/${hotelId}?destination_id=${destinationId}&checkin=${checkin}&checkout=${checkout}&guests=${guests}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || `HTTP ${response.status}: ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      setDetails(data);
+
+      // pricing (best-effort)
+      try {
+        const priceResponse = await fetch(
+          `${API_BASE_URL}/hotels/${hotelId}/prices?` +
+            `destination_id=${encodeURIComponent(destinationId)}&` +
+            `checkin=${encodeURIComponent(checkin)}&` +
+            `checkout=${encodeURIComponent(checkout)}&` +
+            `guests=${encodeURIComponent(guests)}`
+        );
+
+        if (priceResponse.ok) {
+          const priceData = await priceResponse.json();
+          setPricing(priceData);
+
+          if (priceData.rooms && Array.isArray(priceData.rooms) && priceData.rooms.length > 0) {
+            setRooms(priceData.rooms);
+          } else {
+            setRooms([
+              {
+                key: 'standard',
+                roomDescription: 'Standard Room',
+                rooms_available: priceData.roomsAvailable || 'Available',
+                price: priceData.price ? `SGD ${priceData.price}/night` : 'Contact for pricing',
+              },
+            ]);
+          }
+        } else {
+          console.warn('Price response not ok:', priceResponse.status, priceResponse.statusText);
+          setRooms([]);
+        }
+      } catch (priceError) {
+        console.error('Error fetching hotel prices:', priceError);
+        setRooms([]);
+      }
+
+      // images (guarded)
+      const tempImgs: string[] = [];
+      if (data.image_details) {
+        for (let i = 0; i < Math.min(10, data.imageCount || 10); i++) {
+          tempImgs.push(`${data.image_details.prefix}${i}${data.image_details.suffix}`);
+        }
+      }
+      setImages(tempImgs);
+
+      // ✅ amenities (handle both shapes or none)
+      const amenitiesObj = data.hotelDetails?.amenities ?? data.amenities ?? {};
+      setAmenities(Object.keys(amenitiesObj));
+    } catch (err) {
+      console.error('Failed to fetch hotel details:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch hotel details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-slate-50 text-gray-800 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-slate-900 mx-auto" />
+          <p className="mt-4 text-lg text-slate-600">Loading hotel details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-slate-50 text-gray-800 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
+            <h3 className="font-medium text-lg">Error loading hotel details</h3>
+            <p className="text-sm mt-2">{error}</p>
+            <button
+              onClick={() => getData()}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!details || !images || !amenities) {
+    return (
+      <div className="bg-slate-50 text-gray-800 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-slate-600">No hotel details available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const idFromParams = String((params as any)?.id || '');
   return (
     <main className="min-h-screen bg-slate-50 text-gray-800">
       <div className="mx-auto max-w-7xl px-6 py-10">

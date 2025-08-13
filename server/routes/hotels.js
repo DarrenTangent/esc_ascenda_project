@@ -89,7 +89,10 @@ router.get('/:id/prices', validateHotelPrice, async (req, res) => {
         const hotelId = req.params.id;
         const { destination_id, checkin, checkout, guests, lang, currency, country_code } = req.query;
         
-        console.log('Fetching hotel price for:', hotelId, 'with params:', req.query);
+        console.log('=== PRICE FETCH REQUEST ===');
+        console.log('Hotel ID:', hotelId);
+        console.log('Query params:', req.query);
+        console.log('Timestamp:', new Date().toISOString());
         
         const priceData = await hotelService.getHotelPrice(
             hotelId, 
@@ -102,7 +105,17 @@ router.get('/:id/prices', validateHotelPrice, async (req, res) => {
             country_code || 'SG'
         );
         
+        console.log('Price data result:', priceData ? 'SUCCESS' : 'NO DATA');
+        if (priceData) {
+            console.log('Price data keys:', Object.keys(priceData));
+            if (priceData.rooms) {
+                console.log('Number of rooms:', priceData.rooms.length);
+            }
+        }
+        console.log('=== END PRICE FETCH ===');
+        
         if (!priceData) {
+            console.log('Returning 404 - Price not found for hotel:', hotelId);
             return res.status(404).json({ 
                 error: 'Price not found',
                 message: `Price data for hotel ${hotelId} not found`
@@ -111,7 +124,12 @@ router.get('/:id/prices', validateHotelPrice, async (req, res) => {
         
         res.json(priceData);
     } catch (error) {
-        console.error('Get hotel price error:', error);
+        console.error('=== PRICE FETCH ERROR ===');
+        console.error('Hotel ID:', req.params.id);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('=== END PRICE ERROR ===');
+        
         res.status(500).json({ 
             error: 'Failed to get hotel price',
             message: error.message 
