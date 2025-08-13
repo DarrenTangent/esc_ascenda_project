@@ -1,6 +1,7 @@
 // app/hotel/[id]/page.tsx
 'use client';
 
+import { Suspense } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import SafeHotelImage from '@/components/SafeHotelImage';
@@ -81,6 +82,34 @@ function parseHotelDescription(raw?: string) {
 /** ---------------------------------------- */
 
 export default function HotelPage() {
+  return (
+    <Suspense fallback={<HotelPageLoadingFallback />}>
+      <HotelPageContent />
+    </Suspense>
+  );
+}
+
+function HotelPageLoadingFallback() {
+  return (
+    <main className="mx-auto max-w-7xl px-6 py-8">
+      <div className="animate-pulse">
+        <div className="mb-5 space-y-2">
+          <div className="h-8 w-96 rounded bg-gray-200"></div>
+          <div className="h-4 w-64 rounded bg-gray-200"></div>
+        </div>
+        <div className="grid gap-8 md:grid-cols-[1fr_360px]">
+          <div className="space-y-6">
+            <div className="aspect-[16/9] rounded-xl bg-gray-200"></div>
+            <div className="h-32 rounded bg-gray-200"></div>
+          </div>
+          <div className="h-80 rounded-xl bg-gray-200"></div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function HotelPageContent() {
   const { id } = useParams<{ id: string }>();
   const search = useSearchParams();
   const router = useRouter();

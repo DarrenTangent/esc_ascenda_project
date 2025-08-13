@@ -5,30 +5,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import HotelResultCard from './HotelResultCard';
 import HotelTopFilters, { Filters } from './HotelTopFilters';
+import { Hotel, HotelSearchResponse } from '@/types/hotel';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
-
-type Hotel = {
-  id?: string;
-  _id?: string;
-  name?: string;
-  imageUrl?: string;
-  price?: number;
-  rating?: number;
-  freeCancellation?: boolean;
-  [k: string]: any;
-};
-
-type ResponseShape = {
-  page?: number;
-  pageSize?: number;
-  totalPages?: number;
-  totalHotels?: number;
-  hotels?: Hotel[];
-  paginatedHotels?: Hotel[];
-  message?: string;
-};
 
 export default function HotelSearchResults() {
   const params = useSearchParams();
@@ -60,14 +40,24 @@ export default function HotelSearchResults() {
       setError(null);
       try {
         const res = await fetch(fetchUrl);
-        const data: ResponseShape = await res.json();
+        const data: HotelSearchResponse = await res.json();
         if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
         const list =
           (Array.isArray(data?.hotels) && data!.hotels) ||
           (Array.isArray(data?.paginatedHotels) && data!.paginatedHotels) ||
           [];
-        setRawHotels(list);
-        setTotalHotels(typeof data?.totalHotels === 'number' ? data.totalHotels : list.length);
+        
+        // Transform and filter hotels to ensure required fields
+        const transformedHotels = list
+          .map(hotel => ({
+            ...hotel,
+            id: hotel.id || hotel._id || '',
+            name: hotel.name || 'Unknown Hotel'
+          }))
+          .filter(hotel => hotel.id && hotel.name) as Hotel[];
+        
+        setRawHotels(transformedHotels);
+        setTotalHotels(typeof data?.totalHotels === 'number' ? data.totalHotels : transformedHotels.length);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load hotels');
         setRawHotels([]);
@@ -84,11 +74,35 @@ export default function HotelSearchResults() {
 
     const p = new URLSearchParams((params ?? new URLSearchParams()).toString());
     // write/clear keys so the URL reflects the UI
-    f.sort ? p.set('sort', f.sort) : p.delete('sort');
-    f.minPrice != null ? p.set('minPrice', String(f.minPrice)) : p.delete('minPrice');
-    f.maxPrice != null ? p.set('maxPrice', String(f.maxPrice)) : p.delete('maxPrice');
-    f.minRating != null ? p.set('minRating', String(f.minRating)) : p.delete('minRating');
-    f.freeCancellation ? p.set('freeCancellation', 'true') : p.delete('freeCancellation');
+    if (f.sort) {
+      p.set('sort', f.sort);
+    } else {
+      p.delete('sort');
+    }
+    
+    if (f.minPrice != null) {
+      p.set('minPrice', String(f.minPrice));
+    } else {
+      p.delete('minPrice');
+    }
+    
+    if (f.maxPrice != null) {
+      p.set('maxPrice', String(f.maxPrice));
+    } else {
+      p.delete('maxPrice');
+    }
+    
+    if (f.minRating != null) {
+      p.set('minRating', String(f.minRating));
+    } else {
+      p.delete('minRating');
+    }
+    
+    if (f.freeCancellation) {
+      p.set('freeCancellation', 'true');
+    } else {
+      p.delete('freeCancellation');
+    }
 
     // reset to page 1 whenever filters change
     p.delete('page');

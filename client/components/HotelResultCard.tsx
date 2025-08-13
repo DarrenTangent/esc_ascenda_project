@@ -4,25 +4,13 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import SafeHotelImage from './SafeHotelImage';
-
-type Hotel = {
-  id: string;
-  name: string;
-  address?: string;
-  rating?: number;
-  price?: number;
-  freeCancellation?: boolean;
-  amenities?: Record<string, any>;
-  imageUrl?: string;
-  imageDetails?: { prefix?: string; suffix?: string; count?: number };
-  hiresImageIndex?: string | number;
-};
+import { Hotel } from '@/types/hotel';
 
 export default function HotelResultCard({ hotel }: { hotel: Hotel }) {
   const params = useSearchParams();
 
   // Preserve search context
-  const query = new URLSearchParams(params as any);
+  const query = new URLSearchParams(params.toString());
   if (!query.get('rooms')) query.set('rooms', '1');
   if (!query.get('guests') && !query.get('adults')) query.set('guests', '2');
 

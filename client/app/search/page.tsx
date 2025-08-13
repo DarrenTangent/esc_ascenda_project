@@ -1,11 +1,12 @@
 // app/search/page.tsx
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import HotelSearchResults from '@/components/HotelSearchResults';
 
-export default function SearchPage() {
+function SearchContent() {
   const params = useSearchParams();
 
   // prefill from ?destination=..., ?guests=..., ?rooms=...
@@ -38,5 +39,30 @@ export default function SearchPage() {
         <HotelSearchResults />
       </div>
     </main>
+  );
+}
+
+function SearchLoadingFallback() {
+  return (
+    <main className="min-h-screen bg-white">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <div className="animate-pulse">
+          <div className="mb-4 h-8 w-48 rounded bg-gray-200"></div>
+          <div className="space-y-4">
+            <div className="h-32 w-full rounded bg-gray-200"></div>
+            <div className="h-32 w-full rounded bg-gray-200"></div>
+            <div className="h-32 w-full rounded bg-gray-200"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<SearchLoadingFallback />}>
+      <SearchContent />
+    </Suspense>
   );
 }

@@ -3,7 +3,16 @@
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
-const stripe = require('stripe')(process.env.STRIPE_SECRET);
+
+// Validate Stripe environment variable
+const stripeSecretKey = process.env.STRIPE_SECRET;
+if (!stripeSecretKey) {
+  console.error('ERROR: STRIPE_SECRET environment variable is not set!');
+  console.error('Please set STRIPE_SECRET in your .env file with your Stripe secret key.');
+  process.exit(1);
+}
+
+const stripe = require('stripe')(stripeSecretKey);
 const Booking = require('../models/Booking'); // <-- add
 
 router.post('/create-checkout-session', async (req, res) => {

@@ -1,7 +1,7 @@
 // components/SafeHotelImage.tsx
 'use client';
 
-import Image, { ImageProps } from 'next/image';
+import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
 type Props = {
@@ -83,8 +83,7 @@ export default function SafeHotelImage({
 
   if (useNextImage) {
     // Render with next/image (optimized) for whitelisted hosts
-    const common: Partial<ImageProps> = {
-      alt,
+    const imageProps = {
       className,
       sizes,
       quality,
@@ -93,12 +92,13 @@ export default function SafeHotelImage({
     };
 
     if (fill) {
-      return <Image {...common} src={src} fill style={style} />;
+      return <Image {...imageProps} src={src} alt={alt || 'Hotel image'} fill style={style} />;
     }
     return (
       <Image
-        {...common}
+        {...imageProps}
         src={src}
+        alt={alt || 'Hotel image'}
         width={width ?? 800}
         height={height ?? 600}
         style={style}
@@ -109,9 +109,10 @@ export default function SafeHotelImage({
   // Render a plain <img> for non-whitelisted hosts to avoid Next domain errors
   if (fill) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
-        alt={alt}
+        alt={alt || 'Hotel image'}
         onError={handleError}
         className={className}
         style={{ ...style, width: '100%', height: '100%', position: 'absolute', inset: 0 }}
@@ -119,9 +120,10 @@ export default function SafeHotelImage({
     );
   }
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
-      alt={alt}
+      alt={alt || 'Hotel image'}
       onError={handleError}
       className={className}
       width={width ?? 800}

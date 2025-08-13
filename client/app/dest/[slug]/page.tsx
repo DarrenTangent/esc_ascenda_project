@@ -4,10 +4,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-type Props = { params: { slug: string } };
+type Props = { params: Promise<{ slug: string }> };
 
-export default function DestinationPage({ params }: Props) {
-  const key = (params.slug || '').toLowerCase();
+export default async function DestinationPage({ params }: Props) {
+  const { slug } = await params;
+  const key = (slug || '').toLowerCase();
   const dest = DESTS[key];
   if (!dest) return notFound();
 

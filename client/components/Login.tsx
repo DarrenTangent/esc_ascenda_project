@@ -14,7 +14,7 @@ const Login = () => {
 
   const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    void handleSubmit(e as any);
+    void handleSubmit(e as React.FormEvent);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

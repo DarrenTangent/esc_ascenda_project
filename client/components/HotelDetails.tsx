@@ -1,15 +1,14 @@
 // components/HotelDetails.tsx
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
 
 const HotelDetails = () => {
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [details, setDetails] = useState<any>();
   const [rooms, setRooms] = useState<any[]>();
   const [images, setImages] = useState<any[]>();
@@ -110,6 +109,18 @@ const HotelDetails = () => {
     }
   };
 
+  const handleBooking = () => {
+    const destinationId = searchParams?.get('destination_id') ?? '';
+    const checkin = searchParams?.get('checkin') ?? '';
+    const checkout = searchParams?.get('checkout') ?? '';
+    const guests = searchParams?.get('guests') ?? '1';
+    const hotelId = String((params as any)?.id || '');
+    
+    // Navigate to booking page with all the necessary parameters
+    const bookingUrl = `/booking/${hotelId}?destination_id=${destinationId}&checkin=${checkin}&checkout=${checkout}&guests=${guests}`;
+    router.push(bookingUrl);
+  };
+
   useEffect(() => {
     getData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -155,7 +166,6 @@ const HotelDetails = () => {
     );
   }
 
-  const idFromParams = String((params as any)?.id || '');
   return (
     <main className="min-h-screen bg-slate-50 text-gray-800">
       <div className="mx-auto max-w-7xl px-6 py-10">
@@ -170,11 +180,26 @@ const HotelDetails = () => {
           <section className="mb-10">
             <div className="grid h-[480px] grid-cols-1 gap-4 lg:grid-cols-5">
               <div className="relative overflow-hidden lg:col-span-3">
-                <img src={images[0]} alt="" className="h-full w-full object-cover rounded-xl" />
+                <Image 
+                  src={images[0]} 
+                  alt={details.name || "Hotel"} 
+                  fill
+                  className="object-cover rounded-xl"
+                  sizes="(max-width: 1024px) 100vw, 60vw"
+                  priority
+                />
               </div>
               <div className="grid grid-cols-2 grid-rows-2 gap-4 lg:col-span-2">
                 {images.slice(1, 5).map((src, i) => (
-                  <img key={i} src={src} alt="" className="h-full w-full rounded-xl object-cover" />
+                  <div key={i} className="relative overflow-hidden rounded-xl">
+                    <Image 
+                      src={src} 
+                      alt={`Hotel view ${i + 2}`} 
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 1024px) 50vw, 20vw"
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -231,7 +256,7 @@ const HotelDetails = () => {
               <span className="text-sm text-neutral-500"> / night</span>
             </div>
             <button
-              onClick={onReload}
+              onClick={handleBooking}
               className="mt-4 w-full rounded-xl bg-[var(--accent,#C9A663)] px-5 py-2.5 text-white hover:opacity-90"
             >
               Book this stay
@@ -243,3 +268,5 @@ const HotelDetails = () => {
     </main>
   );
 }
+
+export default HotelDetails;

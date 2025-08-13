@@ -1,10 +1,11 @@
 // app/booking/page.tsx
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
-export default function BookingPage() {
+function BookingContent() {
   const sp = useSearchParams();
   const router = useRouter();
 
@@ -64,5 +65,35 @@ export default function BookingPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function BookingLoadingFallback() {
+  return (
+    <main className="mx-auto max-w-3xl px-6 py-10">
+      <div className="animate-pulse">
+        <div className="mb-6 h-8 w-64 rounded bg-gray-200"></div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-5">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-4 w-20 rounded bg-gray-200"></div>
+            <div className="h-4 w-32 rounded bg-gray-200"></div>
+            <div className="h-4 w-20 rounded bg-gray-200"></div>
+            <div className="h-4 w-24 rounded bg-gray-200"></div>
+            <div className="h-4 w-20 rounded bg-gray-200"></div>
+            <div className="h-4 w-24 rounded bg-gray-200"></div>
+          </div>
+          <div className="mt-6 h-12 w-full rounded bg-gray-200"></div>
+          <div className="mt-3 h-12 w-full rounded bg-gray-200"></div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={<BookingLoadingFallback />}>
+      <BookingContent />
+    </Suspense>
   );
 }
