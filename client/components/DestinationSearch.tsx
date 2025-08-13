@@ -1,16 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DateRangePicker } from 'rsuite';
 import 'rsuite/dist/rsuite.min.css';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
 
-interface Destination { term: string; uid: string; }
+type Destination = { term: string; uid: string };
 
 export default function DestinationSearch() {
+  const router = useRouter();
+  const params = useSearchParams();
+
+  // --- state ---
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Destination[]>([]);
   const [selectedDest, setSelectedDest] = useState<Destination | null>(null);
@@ -18,81 +22,114 @@ export default function DestinationSearch() {
   const [dateRange, setDateRange] = useState<[Date, Date] | null>(null);
   const [guests, setGuests] = useState(2);
   const [rooms, setRooms] = useState(1);
-  const router = useRouter();
 
+  // --- prefill from URL (for back navigation or refresh) ---
   useEffect(() => {
-    if (query.length > 1) {
-      const t = setTimeout(async () => {
-        setLoading(true);
-        try {
-          const res = await fetch(
-            `${API_BASE_URL}/destinations/search?q=${encodeURIComponent(query)}`
-          );
-          if (!res.ok) throw new Error();
-          const data = await res.json();
-          setResults(data.destinations);
-        } catch {
-          setResults([]);
-        } finally {
-          setLoading(false);
-        }
-      }, 300);
-      return () => clearTimeout(t);
-    } else {
+    const destination = params.get('destination') || '';
+    const guestsParam = params.get('guests');
+    const roomsParam = params.get('rooms');
+
+    if (destination) setQuery(destination);
+    if (guestsParam) setGuests(Number(guestsParam));
+    if (roomsParam) setRooms(Number(roomsParam));
+  }, [params]);
+
+  // --- destination search with debounce ---
+  useEffect(() => {
+    if (query.trim().length < 2) {
       setResults([]);
+      setSelectedDest(null);
+      return;
     }
+    const t = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/destinations/search?q=${encodeURIComponent(query)}`
+        );
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setResults(Array.isArray(data?.destinations) ? data.destinations : []);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
   }, [query]);
 
-  const formatDate = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-      d.getDate()
-    ).padStart(2, '0')}`;
+  // --- helpers ---
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const formatDate = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
 
   const handleSearch = () => {
     if (!selectedDest || !dateRange) {
-      alert('Please select destination & dates');
+      alert('Please select a destination and travel dates.');
       return;
     }
     const [checkin, checkout] = dateRange;
-    const today = new Date(); today.setHours(0,0,0,0);
-    if (checkin < today) { alert("You can't pick dates before today."); return; }
-    if (checkout <= checkin) { alert('Check-out must be after check-in'); return; }
+    if (checkout <= checkin) {
+      alert('Check-out must be after check-in.');
+      return;
+    }
+
+    const checkinStr = formatDate(checkin);
+    const checkoutStr = formatDate(checkout);
+    const guestsParam = Array(rooms).fill(guests).join('|'); // format like "2|2" if needed
 
     router.push(
-      `/search?destination_id=${selectedDest.uid}` +
-        `&checkin=${formatDate(checkin)}` +
-        `&checkout=${formatDate(checkout)}` +
-        `&rooms=${rooms}&guests=${guests}`
+      `/search?destination=${encodeURIComponent(
+        selectedDest.term
+      )}&destination_id=${encodeURIComponent(
+        selectedDest.uid
+      )}&checkin=${checkinStr}&checkout=${checkoutStr}&guests=${guestsParam}&rooms=${rooms}`
     );
   };
 
-  const minDate = (() => { const t = new Date(); t.setHours(0,0,0,0); return t; })();
-
   return (
-    <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-12">
-      {/* Destination */}
-      <div className="sm:col-span-5">
-        <label className="mb-1 block text-sm font-medium text-slate-800">
-          Destination
-        </label>
-        <div className="relative">
+    <div className="w-full">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+        {/* Destination */}
+        <div className="relative md:col-span-4">
+          <label className="mb-1 block text-sm font-medium text-neutral-700">
+            Destination
+          </label>
           <input
-            type="text"
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setSelectedDest(null); }}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setSelectedDest(null);
+            }}
             placeholder="Where are you going?"
-            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-900 placeholder:text-slate-400 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-300"
+            className="h-11 w-full rounded-lg border border-neutral-300 px-3 outline-none ring-0 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
           />
           {loading && (
-            <span className="absolute right-3 top-2.5 text-sm text-slate-500">…</span>
+            <span className="absolute right-3 top-10 text-xs text-neutral-500">
+              …
+            </span>
           )}
           {results.length > 0 && (
-            <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow">
+            <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-neutral-200 bg-white shadow">
               {results.map((d) => (
                 <li
                   key={d.uid}
-                  className="cursor-pointer px-4 py-2 hover:bg-slate-100"
-                  onClick={() => { setQuery(d.term); setSelectedDest(d); setResults([]); }}
+                  onClick={() => {
+                    setQuery(d.term);
+                    setSelectedDest(d);
+                    setResults([]);
+                  }}
+                  className="cursor-pointer px-3 py-2 hover:bg-neutral-50"
                 >
                   {d.term}
                 </li>
@@ -100,72 +137,78 @@ export default function DestinationSearch() {
             </ul>
           )}
         </div>
-        <button
-          onClick={handleSearch}
-          className="mt-3 w-full rounded-lg bg-blue-600 py-2 font-medium text-white hover:bg-blue-700 transition-colors sm:hidden"
-        >
-          Search
-        </button>
-      </div>
 
-      {/* Dates */}
-      <div className="sm:col-span-4">
-        <label className="mb-1 block text-sm font-medium text-slate-800">
-          Travel Dates
-        </label>
-        <div className="rounded-lg border border-slate-300 bg-white px-2 py-1 focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-300">
-          <DateRangePicker
-            value={dateRange}
-            onChange={(val) => setDateRange(val as [Date, Date])}
-            placeholder="Select check-in & check-out"
-            style={{ width: '100%' }}
-            showOneCalendar
-            shouldDisableDate={(date) => date < minDate}
-            className="!border-0"
-          />
+        {/* Dates */}
+        <div className="md:col-span-4">
+          <label className="mb-1 block text-sm font-medium text-neutral-700">
+            Travel Dates
+          </label>
+          <div className="h-11 w-full">
+            <DateRangePicker
+              size="lg"
+              value={dateRange}
+              onChange={(val) => setDateRange(val as [Date, Date] | null)}
+              placeholder="Select check-in & check-out"
+              showOneCalendar
+              shouldDisableDate={(date) => {
+                const d = new Date(date);
+                d.setHours(0, 0, 0, 0);
+                return d < today;
+              }}
+              className="w-full"
+              editable={false}
+              placement="bottomStart"
+            />
+          </div>
         </div>
-        <p className="mt-1 text-xs text-slate-600">
-          You can’t pick dates before today.
-        </p>
-      </div>
 
-      {/* Guests */}
-      <div className="sm:col-span-2">
-        <label className="mb-1 block text-sm font-medium text-slate-800">
-          Guests
-        </label>
-        <select
-          value={guests}
-          onChange={(e) => setGuests(Number(e.target.value))}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-300"
-        >
-          {[1,2,3,4,5].map((n) => <option key={n} value={n}>{n} pax</option>)}
-        </select>
-      </div>
+        {/* Guests */}
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-sm font-medium text-neutral-700">
+            Guests
+          </label>
+          <select
+            value={guests}
+            onChange={(e) => setGuests(Number(e.target.value))}
+            className="h-11 w-full rounded-lg border border-neutral-300 px-3 outline-none ring-0 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+          >
+            {[1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>
+                {n} {n > 1 ? 'guests' : 'guest'}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {/* Rooms */}
-      <div className="sm:col-span-1">
-        <label className="mb-1 block text-sm font-medium text-slate-800">
-          Rooms
-        </label>
-        <select
-          value={rooms}
-          onChange={(e) => setRooms(Number(e.target.value))}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-300"
-        >
-          {[1,2,3,4].map((n) => <option key={n} value={n}>{n}</option>)}
-        </select>
-      </div>
+        {/* Rooms */}
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-sm font-medium text-neutral-700">
+            Rooms
+          </label>
+          <select
+            value={rooms}
+            onChange={(e) => setRooms(Number(e.target.value))}
+            className="h-11 w-full rounded-lg border border-neutral-300 px-3 outline-none ring-0 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+          >
+            {[1, 2, 3, 4].map((n) => (
+              <option key={n} value={n}>
+                {n} room{n > 1 ? 's' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {/* Search (desktop) */}
-      <div className="hidden sm:col-span-12 sm:flex sm:justify-start">
-        <button
-          onClick={handleSearch}
-          className="mt-2 rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 transition-colors"
-        >
-          Search
-        </button>
+        {/* Search button */}
+        <div className="md:col-span-12 flex items-end">
+          <button
+            onClick={handleSearch}
+            className="h-11 w-full rounded-lg bg-blue-600 font-semibold text-white transition hover:bg-blue-700 md:w-auto md:px-6"
+          >
+            Search Hotels
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+
