@@ -19,6 +19,7 @@ interface BookingInfo {
   email: string;
   status: string;
   bookingDate: string;
+  roomDescription: string;
 }
 
 export default function BookingConfirmation() {
@@ -29,22 +30,55 @@ export default function BookingConfirmation() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const bookingId = searchParams?.get('bookingId');
+  const sessionId = searchParams?.get('session_id');
+
+  useEffect(() => {
+    async function verifyIfNeeded() {
+      if (bookingId && sessionId) {
+        try {
+          await fetch(`${API_BASE_URL}/payments/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bookingId, session_id: sessionId }),
+          });
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    verifyIfNeeded();
+  }, [bookingId, sessionId]);
+
   useEffect(() => {
     async function fetchBooking() {
-      try {
-        const bookingId = searchParams?.get('bookingId');
-        
-        if (!bookingId) {
-          setError('No booking ID provided');
-          setLoading(false);
-          return;
-        }
+      if (!bookingId) {
+        setError('No booking ID provided');
+        setLoading(false);
+        return;
+      }
 
+      try {
         const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
         
         if (response.ok) {
           const bookingData = await response.json();
-          setBooking(bookingData);
+          setBooking({
+            bookingId: bookingData._id || bookingData.bookingId,
+            hotelName: bookingData.hotelName,
+            checkIn: bookingData.checkIn,
+            checkOut: bookingData.checkOut,
+            guests: bookingData.guests,
+            rooms: bookingData.rooms,
+            totalPrice: bookingData.totalPrice,
+            nights: bookingData.nights,
+            firstName: bookingData.firstName,
+            lastName: bookingData.lastName,
+            email: bookingData.email,
+            status: bookingData.paid ? 'Confirmed' : 'Pending',
+            bookingDate: bookingData.createdAt || bookingData.bookingDate,
+            roomDescription: bookingData.roomDescription || 'N/A',
+          });
         } else {
           setError('Booking not found');
         }
@@ -57,19 +91,29 @@ export default function BookingConfirmation() {
     }
 
     fetchBooking();
-  }, [searchParams]);
+  }, [bookingId]);
 
   const handlePrint = () => {
     window.print();
   };
 
-  const handleNewBooking = () => {
-    router.push('/');
-  };
-
   const handleHome = () => {
     router.push('/');
   };
+
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat('en-SG', { 
+      style: 'currency', 
+      currency: 'SGD' 
+    }).format(price);
 
   if (loading) {
     return (
@@ -169,23 +213,33 @@ export default function BookingConfirmation() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500">Check-in</p>
-                    <p className="font-medium">{new Date(booking.checkIn).toLocaleDateString()}</p>
+                    <p className="font-medium">{formatDate(booking.checkIn)}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Check-out</p>
-                    <p className="font-medium">{new Date(booking.checkOut).toLocaleDateString()}</p>
+                    <p className="font-medium">{formatDate(booking.checkOut)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Duration</p>
+                    <p className="font-medium">
+                      {booking.nights} night{booking.nights > 1 ? 's' : ''}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-500">Guests</p>
-                    <p className="font-medium">{booking.guests}</p>
+                    <p className="font-medium">
+                      {booking.guests} guest{parseInt(booking.guests) > 1 ? 's' : ''}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-500">Rooms</p>
-                    <p className="font-medium">{booking.rooms}</p>
+                    <p className="font-medium">
+                      {booking.rooms} room{parseInt(booking.rooms) > 1 ? 's' : ''}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Nights</p>
-                    <p className="font-medium">{booking.nights}</p>
+                    <p className="text-gray-500">Room Description</p>
+                    <p className="font-medium">{booking.roomDescription}</p>
                   </div>
                 </div>
               </div>
@@ -194,8 +248,12 @@ export default function BookingConfirmation() {
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold text-gray-900">Total Amount</span>
-                  <span className="text-2xl font-bold text-indigo-600">${booking.totalPrice.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-indigo-600">{formatPrice(booking.totalPrice)}</span>
                 </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  Payment processed on{' '}
+                  {new Date(booking.bookingDate).toLocaleDateString()}
+                </p>
               </div>
 
               {/* Status */}
@@ -211,10 +269,10 @@ export default function BookingConfirmation() {
                   onClick={handlePrint}
                   className="flex-1 bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700 transition"
                 >
-                  Print Details
+                  Print Confirmation
                 </button>
                 <button
-                  onClick={handleNewBooking}
+                  onClick={() => router.push('/search')}
                   className="flex-1 bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 transition"
                 >
                   Book Another Stay
@@ -229,12 +287,17 @@ export default function BookingConfirmation() {
             </div>
           </div>
 
-          {/* Additional Information */}
+          {/* Important Information */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-            <p className="text-sm text-blue-800">
-              A confirmation email has been sent to {booking.email}. 
-              Please present this confirmation at check-in.
-            </p>
+            <h4 className="font-medium text-blue-900 mb-2">
+              Important Information
+            </h4>
+            <ul className="text-sm text-blue-700 space-y-1 text-left">
+              <li>• Please bring a valid ID and this confirmation for check-in</li>
+              <li>• Check-in time is typically 3:00 PM, check-out is 11:00 AM</li>
+              <li>• A confirmation email has been sent to {booking.email}</li>
+              <li>• For changes or cancellations, contact the hotel directly</li>
+            </ul>
           </div>
         </div>
       </div>
