@@ -279,25 +279,28 @@ function HotelPageContent() {
   }, [id, dates.checkin, dates.checkout, rooms, guests, destinationId]);
 
   const handleBook = () => {
-    if (!selectedRoom) {
+    if (roomOffers.length > 0 && !selectedRoom) {
       alert('Please select a room before booking.');
       return;
     }
 
     const q = new URLSearchParams({
-      hotel_id: data?.id ?? '',
       checkin: dates.checkin,
       checkout: dates.checkout,
       rooms: String(rooms),
       guests: String(guests),
-      room_key: selectedRoom.key,
-      room_description: selectedRoom.roomDescription || selectedRoom.type || '',
-      room_price: selectedRoom.price,
     });
 
     if (destinationId) q.set('destination_id', destinationId);
+    
+    // Add room details if a room is selected
+    if (selectedRoom) {
+      q.set('room_key', selectedRoom.key);
+      q.set('room_desc', selectedRoom.roomDescription || selectedRoom.type || '');
+      q.set('room_price', selectedRoom.price);
+    }
 
-    router.push(`/booking?${q.toString()}`);
+    router.push(`/booking/${data?.id}?${q.toString()}`);
   };
 
   const onPrevPhoto = useCallback(() => {
@@ -681,7 +684,7 @@ function HotelPageContent() {
                 : 'bg-indigo-600 text-white hover:bg-indigo-700'
             )}
           >
-            {roomOffers.length > 0 && !selectedRoom ? 'Select a room first' : 'Book now'}
+            {roomOffers.length > 0 && !selectedRoom ? 'Select a room first' : 'Continue to Booking'}
           </button>
 
           <p className="mt-2 text-xs text-neutral-500">
@@ -713,7 +716,7 @@ function HotelPageContent() {
                 : 'bg-indigo-600 text-white'
             )}
           >
-            {roomOffers.length > 0 && !selectedRoom ? 'Select a room' : 'Book'}
+            {roomOffers.length > 0 && !selectedRoom ? 'Select a room' : 'Continue'}
           </button>
         </div>
       </div>
