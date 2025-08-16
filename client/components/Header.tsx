@@ -7,11 +7,10 @@ import { usePathname } from 'next/navigation';
 
 type NavLink = { href: string; label: string };
 
+// **Only About + Blog now**
 const NAV_LINKS: NavLink[] = [
-  { href: '/destinations', label: 'Destinations' },
-  { href: '/about',        label: 'About' },
-  { href: '/blog',         label: 'Blog'  },
-  { href: '/search',       label: 'Book now' },
+  { href: '/about', label: 'About' },
+  { href: '/blog',  label: 'Blog'  },
 ];
 
 export default function Header() {
@@ -24,7 +23,6 @@ export default function Header() {
   const isHome = pathname === '/' || pathname === '/home';
 
   useEffect(() => {
-    // Scroll shadow & glass transition
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -48,7 +46,6 @@ export default function Header() {
 
   // Header skin
   const wrapperClass = useMemo(() => {
-    // Home: transparent until scroll; Others: solid
     if (isHome) {
       return scrolled
         ? 'bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 shadow-sm'
@@ -57,20 +54,15 @@ export default function Header() {
     return 'bg-white shadow-sm';
   }, [isHome, scrolled]);
 
-  const linkBase =
-    'px-3 py-2 text-sm font-medium transition-colors';
-  const linkActive =
-    'text-blue-700';
-  const linkIdle =
-    'text-slate-700 hover:text-blue-700';
+  const linkBase = 'px-3 py-2 text-sm font-medium transition-colors';
+  const linkActive = 'text-blue-700';
+  const linkIdle = 'text-slate-700 hover:text-blue-700';
 
   return (
     <header className={`sticky top-0 z-50 transition-colors ${wrapperClass}`}>
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Left: Brand */}
         <div className="flex items-center gap-3">
-          {/* If you have a logo.png or logo.svg, drop it here */}
-          {/* <Image src="/logo.svg" alt="Ascenda" width={28} height={28} /> */}
           <Link
             href="/"
             className={`text-lg font-semibold ${isHome && !scrolled ? 'text-white drop-shadow' : 'text-slate-900'}`}
