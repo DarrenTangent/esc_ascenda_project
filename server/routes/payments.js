@@ -78,4 +78,32 @@ router.post('/verify', async (req, res) => {
   }
 });
 
+
+// server/routes/payments.js
+router.post('/verify', async (req, res) => {
+  try {
+    const { session_id, bookingId } = req.body;
+    if (!session_id || !bookingId) return res.status(400).json({ error: 'Missing params' });
+
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    const paid = session.payment_status === 'paid';
+    const amountTotal = session.amount_total ?? null; // cents
+
+    const update = {
+      paid,
+      paymentIntentId: session.payment_intent || undefined,
+    };
+    // 2-state flow: only set Confirmed when paid (never set Pending)
+    if (paid) update.status = 'Confirmed';
+    if (amountTotal != null) update.totalPrice = amountTotal / 100;
+
+    await Booking.findByIdAndUpdate(bookingId, update);
+
+    res.json({ ok: true, paid, amount: amountTotal });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Verify failed' });
+  }
+});
+
 module.exports = router;
