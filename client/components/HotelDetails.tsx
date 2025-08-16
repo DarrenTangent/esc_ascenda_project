@@ -1,4 +1,6 @@
-// components/HotelDetails.tsx
+
+
+// client/components/HotelDetails.tsx
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
@@ -10,29 +12,31 @@ const API_BASE_URL =
 
 const HotelDetails = () => {
   const [details, setDetails] = useState<any>();
-  const [rooms, setRooms] = useState<any[]>();
-  const [images, setImages] = useState<any[]>();
-  const [amenities, setAmenities] = useState<any[]>();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [images, setImages] = useState<string[]>([]);
+  const [amenities, setAmenities] = useState<string[]>([]);
   const [pricing, setPricing] = useState<any>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   const searchParams = useSearchParams();
   const params = useParams();
   const router = useRouter();
 
-  const getData = async () => {
+  function toNumberPrice(p: unknown): number {
+    if (typeof p === 'number') return p;
+    const n = parseFloat(String(p).replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  async function getData() {
     try {
       setLoading(true);
       setError(null);
 
-      if (!searchParams) throw new Error('Search parameters are not available');
-
-      // `/hotel/[id]` -> params.id
       const hotelId = String((params as any)?.id || '');
-
-      // rest from query
       const destinationId = searchParams?.get('destination_id') ?? '';
       const checkin = searchParams?.get('checkin') ?? '';
       const checkout = searchParams?.get('checkout') ?? '';
@@ -42,89 +46,97 @@ const HotelDetails = () => {
         throw new Error('Missing required parameters');
       }
 
-      const url = `${API_BASE_URL}/hotels/${hotelId}?destination_id=${destinationId}&checkin=${checkin}&checkout=${checkout}&guests=${guests}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `HTTP ${response.status}: ${response.statusText}`
-        );
-      }
-
-      const data = await response.json();
+      // Hotel info
+      const detailsRes = await fetch(
+        `${API_BASE_URL}/hotels/${hotelId}?destination_id=${destinationId}&checkin=${checkin}&checkout=${checkout}&guests=${guests}`
+      );
+      if (!detailsRes.ok) throw new Error(`Hotel fetch failed: ${detailsRes.status}`);
+      const data = await detailsRes.json();
       setDetails(data);
 
-      // pricing (best-effort)
-      try {
-        const priceResponse = await fetch(
-          `${API_BASE_URL}/hotels/${hotelId}/prices?` +
-            `destination_id=${encodeURIComponent(destinationId)}&` +
-            `checkin=${encodeURIComponent(checkin)}&` +
-            `checkout=${encodeURIComponent(checkout)}&` +
-            `guests=${encodeURIComponent(guests)}`
-        );
+      // Prices + rooms
+      const priceRes = await fetch(
+        `${API_BASE_URL}/hotels/${hotelId}/prices?destination_id=${encodeURIComponent(
+          destinationId
+        )}&checkin=${encodeURIComponent(checkin)}&checkout=${encodeURIComponent(
+          checkout
+        )}&guests=${encodeURIComponent(guests)}`
+      );
 
-        if (priceResponse.ok) {
-          const priceData = await priceResponse.json();
-          setPricing(priceData);
+      if (priceRes.ok) {
+        const priceData = await priceRes.json();
+        setPricing(priceData);
 
-          if (priceData.rooms && Array.isArray(priceData.rooms) && priceData.rooms.length > 0) {
-            setRooms(priceData.rooms);
-          } else {
-            setRooms([
-              {
-                key: 'standard',
-                roomDescription: 'Standard Room',
-                rooms_available: priceData.roomsAvailable || 'Available',
-                price: priceData.price ? `SGD ${priceData.price}/night` : 'Contact for pricing',
-              },
-            ]);
-          }
+        if (Array.isArray(priceData.rooms) && priceData.rooms.length > 0) {
+          // Normalize to ensure "price" is numeric
+          const normalized = priceData.rooms.map((r: any, idx: number) => ({
+            key: r.key ?? `room-${idx}`,
+            roomDescription: r.roomDescription ?? r.type ?? 'Room',
+            rooms_available: r.rooms_available ?? r.roomsAvailable ?? null,
+            price: toNumberPrice(r.price),
+          }));
+          setRooms(normalized);
         } else {
-          console.warn('Price response not ok:', priceResponse.status, priceResponse.statusText);
-          setRooms([]);
+          // Fallback from top-level price
+          setRooms([
+            {
+              key: 'standard',
+              roomDescription: 'Standard Room',
+              rooms_available: priceData.roomsAvailable ?? null,
+              price: toNumberPrice(priceData.price),
+            },
+          ]);
         }
-      } catch (priceError) {
-        console.error('Error fetching hotel prices:', priceError);
+      } else {
         setRooms([]);
       }
 
-      // images (guarded)
-      const tempImgs: string[] = [];
+      // Images
+      const imgs: string[] = [];
       if (data.image_details) {
         for (let i = 0; i < Math.min(10, data.imageCount || 10); i++) {
-          tempImgs.push(`${data.image_details.prefix}${i}${data.image_details.suffix}`);
+          imgs.push(`${data.image_details.prefix}${i}${data.image_details.suffix}`);
         }
       }
-      setImages(tempImgs);
+      setImages(imgs);
 
-      // ✅ amenities (handle both shapes or none)
+      // Amenities
       const amenitiesObj = data.hotelDetails?.amenities ?? data.amenities ?? {};
       setAmenities(Object.keys(amenitiesObj));
-    } catch (err) {
-      console.error('Failed to fetch hotel details:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch hotel details');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to fetch hotel details');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleBooking = () => {
-    const destinationId = searchParams?.get('destination_id') ?? '';
-    const checkin = searchParams?.get('checkin') ?? '';
-    const checkout = searchParams?.get('checkout') ?? '';
-    const guests = searchParams?.get('guests') ?? '1';
-    const hotelId = String((params as any)?.id || '');
-    
-    // Navigate to booking page with all the necessary parameters
-    const bookingUrl = `/booking/${hotelId}?destination_id=${destinationId}&checkin=${checkin}&checkout=${checkout}&guests=${guests}`;
-    router.push(bookingUrl);
-  };
+  }
 
   useEffect(() => {
     getData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const formatSGD = (n: number) =>
+    new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(n);
+
+  const handleBookSelected = () => {
+    const destinationId = searchParams?.get('destination_id') ?? '';
+    const checkin = searchParams?.get('checkin') ?? '';
+    const checkout = searchParams?.get('checkout') ?? '';
+    const guests = searchParams?.get('guests') ?? '1';
+    const hotelId = String((params as any)?.id || '');
+
+    const selected = rooms[selectedIndex] ?? rooms[0];
+    const bookingUrl =
+      `/booking/${hotelId}` +
+      `?destination_id=${encodeURIComponent(destinationId)}` +
+      `&checkin=${encodeURIComponent(checkin)}` +
+      `&checkout=${encodeURIComponent(checkout)}` +
+      `&guests=${encodeURIComponent(guests)}` +
+      `&room_desc=${encodeURIComponent(selected?.roomDescription || '')}` +
+      `&room_price=${encodeURIComponent(String(selected?.price ?? ''))}`;
+
+    router.push(bookingUrl);
+  };
 
   if (loading) {
     return (
@@ -137,30 +149,12 @@ const HotelDetails = () => {
     );
   }
 
-  if (error) {
+  if (error || !details) {
     return (
       <div className="bg-slate-50 text-gray-800 min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
-            <h3 className="font-medium text-lg">Error loading hotel details</h3>
-            <p className="text-sm mt-2">{error}</p>
-            <button
-              onClick={() => getData()}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!details || !images || !amenities) {
-    return (
-      <div className="bg-slate-50 text-gray-800 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg text-slate-600">No hotel details available</p>
+          <h2 className="text-4xl font-semibold">Hotel not found</h2>
+          <p className="mt-2 text-neutral-600">Try returning to search and picking a different hotel.</p>
         </div>
       </div>
     );
@@ -176,13 +170,13 @@ const HotelDetails = () => {
         </header>
 
         {/* Gallery */}
-        {!!images?.length && (
+        {!!images.length && (
           <section className="mb-10">
             <div className="grid h-[480px] grid-cols-1 gap-4 lg:grid-cols-5">
               <div className="relative overflow-hidden lg:col-span-3">
-                <Image 
-                  src={images[0]} 
-                  alt={details.name || "Hotel"} 
+                <Image
+                  src={images[0]}
+                  alt={details.name || 'Hotel'}
                   fill
                   className="object-cover rounded-xl"
                   sizes="(max-width: 1024px) 100vw, 60vw"
@@ -192,9 +186,9 @@ const HotelDetails = () => {
               <div className="grid grid-cols-2 grid-rows-2 gap-4 lg:col-span-2">
                 {images.slice(1, 5).map((src, i) => (
                   <div key={i} className="relative overflow-hidden rounded-xl">
-                    <Image 
-                      src={src} 
-                      alt={`Hotel view ${i + 2}`} 
+                    <Image
+                      src={src}
+                      alt={`Hotel view ${i + 2}`}
                       fill
                       className="object-cover"
                       sizes="(max-width: 1024px) 50vw, 20vw"
@@ -209,39 +203,38 @@ const HotelDetails = () => {
         <div className="grid gap-8 md:grid-cols-[1fr_360px]">
           {/* Details */}
           <section>
-            {details.description && (
+            {!!rooms.length && (
               <>
-                <h2 className="font-serif text-2xl">About this hotel</h2>
-                <p className="mt-3 leading-relaxed text-neutral-700">{details.description}</p>
-              </>
-            )}
-
-            {!!details.amenities && (
-              <>
-                <h3 className="mt-8 font-serif text-xl">Amenities</h3>
-                <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {Object.keys(details.amenities).map(a => (
-                    <li key={a} className="rounded-lg border bg-white p-3 text-sm text-neutral-700">{a}</li>
-                  ))}
-                </ul>
-              </>
-            )}
-
-            {!!rooms?.length && (
-              <>
-                <h3 className="mt-10 font-serif text-xl">Available Rooms</h3>
-                <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {rooms.map((room: any) => (
-                    <div key={room.key ?? room.type} className="rounded-2xl border border-slate-100 bg-white p-6 shadow transition hover:-translate-y-0.5 hover:shadow-lg">
-                      <h4 className="font-serif text-lg">{room.roomDescription ?? room.type}</h4>
-                      {room.rooms_available != null && (
-                        <p className="text-sm text-neutral-600">{room.rooms_available} rooms available</p>
-                      )}
-                      {room.price && <p className="mt-2 font-medium text-sky-700">{room.price}</p>}
-                      <button className="mt-4 w-full rounded-xl bg-[var(--accent,#C9A663)] px-5 py-2.5 text-white hover:opacity-90">
-                        Select Room
-                      </button>
-                    </div>
+                <h3 className="mt-2 font-serif text-xl">Available Rooms</h3>
+                <div className="mt-4 grid gap-6">
+                  {rooms.map((room, idx) => (
+                    <label
+                      key={room.key ?? idx}
+                      className={`rounded-2xl border bg-white p-6 shadow cursor-pointer ${
+                        selectedIndex === idx ? 'ring-2 ring-indigo-500' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <input
+                          type="radio"
+                          name="selectedRoom"
+                          className="mt-1"
+                          checked={selectedIndex === idx}
+                          onChange={() => setSelectedIndex(idx)}
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-serif text-lg">{room.roomDescription}</h4>
+                          {room.rooms_available != null && (
+                            <p className="text-sm text-neutral-600">
+                              {room.rooms_available} rooms available
+                            </p>
+                          )}
+                          <p className="mt-2 font-medium text-sky-700">
+                            {formatSGD(toNumberPrice(room.price))}
+                          </p>
+                        </div>
+                      </div>
+                    </label>
                   ))}
                 </div>
               </>
@@ -250,13 +243,13 @@ const HotelDetails = () => {
 
           {/* Sticky book box */}
           <aside className="self-start rounded-xl bg-white p-5 shadow md:sticky md:top-20">
-            <div className="text-sm text-neutral-600">From</div>
+            <div className="text-sm text-neutral-600">Selected nightly rate</div>
             <div className="text-2xl font-semibold">
-              {details.currency ?? 'SGD'} {rooms?.[0]?.price ?? ''}
+              {formatSGD(toNumberPrice(rooms[selectedIndex]?.price ?? rooms[0]?.price ?? 0))}
               <span className="text-sm text-neutral-500"> / night</span>
             </div>
             <button
-              onClick={handleBooking}
+              onClick={handleBookSelected}
               className="mt-4 w-full rounded-xl bg-[var(--accent,#C9A663)] px-5 py-2.5 text-white hover:opacity-90"
             >
               Book this stay
@@ -267,6 +260,6 @@ const HotelDetails = () => {
       </div>
     </main>
   );
-}
+};
 
 export default HotelDetails;

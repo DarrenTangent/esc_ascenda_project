@@ -11,7 +11,7 @@ jest.mock('next/navigation', () => ({
 
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 
-// Import your actual booking form component (adjust path if needed)
+// Import the page that renders the form (adjust if your path differs)
 import BookingForm from '../app/booking/[id]/page';
 
 // Helpers
@@ -20,24 +20,19 @@ const makeSearchParams = (map: Record<string, string | null>) => ({
   get: (k: string) => (k in map ? map[k] : null),
 });
 
-// Helper: fill by label; if label isn’t found (e.g., custom UI),
-// fall back to input/textarea/select by name.
+// Fill by label; if label isn’t found, fall back to name
 function fillByLabelOrName(label: RegExp, name: string, value: string) {
   const labeled = screen.queryByLabelText(label);
   if (labeled) {
     fireEvent.change(labeled, { target: { value } });
     return;
   }
-
-  const el =
-    document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
-      `input[name="${name}"], textarea[name="${name}"], select[name="${name}"]`
-    );
-
+  const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+    `input[name="${name}"], textarea[name="${name}"], select[name="${name}"]`
+  );
   if (!el) throw new Error(`Could not find input for ${name}`);
   fireEvent.change(el, { target: { value } });
 }
-
 
 describe('BookingForm', () => {
   beforeEach(() => {
@@ -52,7 +47,7 @@ describe('BookingForm', () => {
         checkout: '2025-08-30',
         guests: '2',
         rooms: '1',
-        room_desc: 'Family Room, Window', // simulate passing description
+        room_desc: 'Family Room, Window', // description passed from hotel page
       })
     );
 
@@ -84,7 +79,6 @@ describe('BookingForm', () => {
 
     render(<BookingForm />);
 
-    // Wait for summary (ensures async state updates finished)
     expect(await screen.findByText(/Booking Summary/i)).toBeInTheDocument();
     expect(screen.getByText(/Test Hotel/i)).toBeInTheDocument();
     expect(screen.getByText(/Total:/i)).toBeInTheDocument();
@@ -126,18 +120,14 @@ describe('BookingForm', () => {
     // Wait for form button to appear before typing
     await screen.findByRole('button', { name: /Book Now/i });
 
-    // Fill minimal form fields (by label or fallback to name)
+    // Fill only the fields that still exist in the form
     fillByLabelOrName(/First Name/i, 'firstName', 'John');
     fillByLabelOrName(/Last Name/i, 'lastName', 'Doe');
     fillByLabelOrName(/Email/i, 'email', 'john@example.com');
     fillByLabelOrName(/Phone/i, 'phone', '12345678');
     fillByLabelOrName(/Special Requests/i, 'specialRequests', 'N/A');
-    fillByLabelOrName(/Card Number/i, 'cardNumber', '4111111111111111');
-    fillByLabelOrName(/Expiry/i, 'expiry', '12/25');
-    fillByLabelOrName(/CVV/i, 'cvv', '123');
-    fillByLabelOrName(/Billing Address/i, 'billingAddress', '8 Somapah');
 
-    // Click submit
+    // Submit
     fireEvent.click(screen.getByRole('button', { name: /Book Now/i }));
 
     // Expect the 3rd fetch to be /api/bookings and include roomDescription
@@ -154,11 +144,9 @@ describe('BookingForm', () => {
     const stripeCall = (global.fetch as jest.Mock).mock.calls[3];
     expect(stripeCall[0]).toMatch(/\/api\/payments\/create-checkout-session$/);
 
-    // (Optional) also assert the returned URL shape
+    // Optional: also assert the returned URL
     const stripeRes = await (global.fetch as jest.Mock).mock.results[3].value;
     expect((await stripeRes.json()).url).toBe('https://stripe.test/session/xyz');
-
-    // NOTE: We intentionally do NOT assert `window.location.href` here to avoid jsdom nav issues.
   });
 
   test('handles Stripe creation failure gracefully', async () => {
@@ -193,15 +181,14 @@ describe('BookingForm', () => {
 
     render(<BookingForm />);
 
-    // Wait for form to be ready
+    // Wait for form
     await screen.findByRole('button', { name: /Book Now/i });
 
-    // Fill a couple required fields
+    // Fill minimal required fields
     fillByLabelOrName(/First Name/i, 'firstName', 'J');
     fillByLabelOrName(/Last Name/i, 'lastName', 'D');
     fillByLabelOrName(/Email/i, 'email', 'j@d.com');
     fillByLabelOrName(/Phone/i, 'phone', '1');
-    fillByLabelOrName(/Billing Address/i, 'billingAddress', 'Addr');
 
     fireEvent.click(screen.getByRole('button', { name: /Book Now/i }));
 

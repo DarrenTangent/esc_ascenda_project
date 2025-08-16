@@ -7,17 +7,17 @@ const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
+// ---- ROUTES (keep these as separate files under server/routes) ----
 const destinationRoutes = require('./routes/destinations');
-const hotels = require('./routes/hotels');
+const hotelsRoute = require('./routes/hotels');
 const bookingsRoute = require('./routes/bookings');
 const paymentsRoute = require('./routes/payments');
-
-console.log('Routes loaded successfully');
+const supportRouter = require('./routes/support');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Security / infra
+// ---------- Security / infra ----------
 app.use(helmet());
 app.use(compression());
 
@@ -31,7 +31,7 @@ if (process.env.NODE_ENV !== 'test') {
   app.use('/api/', limiter);
 }
 
-// CORS
+// ---------- CORS ----------
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:3000',
   'http://localhost:3001',
@@ -41,9 +41,10 @@ app.use(
     origin(origin, callback) {
       if (!origin) return callback(null, true);
       if (allowedOrigins.indexOf(origin) === -1) {
-        const msg =
-          'The CORS policy for this site does not allow access from the specified Origin.';
-        return callback(new Error(msg), false);
+        return callback(
+          new Error('The CORS policy for this site does not allow access from the specified Origin.'),
+          false
+        );
       }
       return callback(null, true);
     },
@@ -51,38 +52,75 @@ app.use(
   })
 );
 
-// Body parsing
+// ---------- Body parsing ----------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// DB connect (skip in tests)
+// ---------- DB connect (fail fast if not connected) ----------
 if (process.env.NODE_ENV !== 'test') {
   mongoose
-    .connect(process.env.MONGO_URI || 'mongodb://localhost:27017/hotel-booking')
+    .connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/hotel-booking')
     .then(() => console.log('MongoDB connected'))
     .catch((err) => {
-      console.warn('MongoDB connection failed:', err.message);
-      console.log('Continuing without MongoDB - some features may be limited');
+      console.error('MongoDB connection failed:', err.message);
+      process.exit(1);
     });
 }
 
-// Routes
+// ---------- Routes ----------
 app.use('/api/payments', paymentsRoute);
 app.use('/api/bookings', bookingsRoute);
 app.use('/api/destinations', destinationRoutes);
-app.use('/api/hotels', hotels);
+app.use('/api/hotels', hotelsRoute);
+app.use('/api/support', supportRouter);
 
-// Simple test route (kept from origin)
+// ---------- SMTP sanity check (optional) ----------
+// (async () => {
+//   try {
+//     const { createTransport } = require('nodemailer');
+//     const t = createTransport({
+//       host: process.env.SMTP_HOST,
+//       port: Number(process.env.SMTP_PORT || 587),
+//       secure: false,
+//       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+//     });
+//     await t.verify();
+//     console.log('SMTP connection verified');
+//   } catch (e) {
+//     console.error('SMTP verify failed:', e.message);
+//   }
+// })();
+
+// after routes…
+if (process.env.NODE_ENV !== 'test') {
+  (async () => {
+    try {
+      const { createTransport } = require('nodemailer');
+      const t = createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: false,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      await t.verify();
+      console.log('SMTP connection verified');
+    } catch (e) {
+      console.error('SMTP verify failed', e.message);
+    }
+  })();
+}
+
+
+// ---------- Test/Health ----------
 app.get('/test', (req, res) => {
   res.json({ message: 'Basic routing works!', timestamp: new Date().toISOString() });
 });
 
-// Health
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Errors
+// ---------- Errors ----------
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
@@ -91,7 +129,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404
+// ---------- 404 ----------
 app.use('*', (req, res) => res.status(404).json({ error: 'Route not found' }));
 
 module.exports = app;

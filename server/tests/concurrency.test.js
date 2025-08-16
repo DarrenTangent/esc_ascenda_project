@@ -1,14 +1,15 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const app = require('../index');
-const Booking = require('../models/Booking');
 
 let mongo;
+let app;
+
 beforeAll(async () => {
   process.env.NODE_ENV = 'test';
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
+  app = require('../index');
 });
 
 afterEach(async () => {
@@ -22,27 +23,39 @@ afterAll(async () => {
 });
 
 describe('Bookings API - Concurrency', () => {
-  test('should handle multiple concurrent submissions and persist all', async () => {
+  test('handles multiple concurrent submissions and persists all', async () => {
     const mk = (i) => ({
       firstName: `User${i}`,
       lastName: `Test${i}`,
       email: `user${i}@example.com`,
       phone: `9000000${i}`,
       specialRequests: '',
-      cardNumber: '4111111111111111',
-      expiry: '11/27',
-      cvv: '123',
-      billingAddress: `Blk ${i} Example, Singapore`,
+      hotelId: 'EgHh',
+      hotelName: 'Test Hotel',
+      hotelAddress: '123 Road',
+      checkIn: '2025-08-29',
+      checkOut: '2025-08-31',
+      nights: 2,
+      guests: '2',
+      rooms: '1',
+      totalPrice: 100 + i,
+      roomDescription: `Room ${i}`,
     });
 
-    const payloads = [1,2,3,4,5].map(mk);
+    const payloads = [1, 2, 3, 4, 5].map(mk);
 
     const results = await Promise.all(
-      payloads.map(p => request(app).post('/api/bookings').send(p))
+      payloads.map((p) =>
+        request(app)
+          .post('/api/bookings')
+          .set('Content-Type', 'application/json')
+          .send(p)
+      )
     );
 
-    results.forEach(r => expect([200, 201]).toContain(r.statusCode));
+    results.forEach((r) => expect([200, 201]).toContain(r.statusCode));
 
+    const Booking = require('../models/Booking');
     const count = await Booking.countDocuments({});
     expect(count).toBe(payloads.length);
   });
