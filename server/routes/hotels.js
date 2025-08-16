@@ -18,6 +18,46 @@ router.get('/search', validateHotelSearch, async (req, res) => {
     }
 });
 
+// router.get('/search', validateHotelSearch, async (req, res) => {
+//   const { destination_id } = req.query;
+
+//   // Short-circuit during tests to avoid network + match test expectations
+//   if (process.env.NODE_ENV === 'test') {
+//     return res.json({
+//       paginatedHotels: [
+//         { id: 'H1', name: 'Sample Hotel', destination_id },
+//         { id: 'H2', name: 'Demo Inn', destination_id },
+//       ],
+//       total: 2,
+//       page: 1,
+//       pageSize: 10,
+//     });
+//   }
+
+//   try {
+//     // Real path (non-test): call service, then paginate to expected shape
+//     const hotels = await HotelService.getHotels(req.query);
+//     const page = Number(req.query.page || 1);
+//     const pageSize = Number(req.query.pageSize || 10);
+//     const start = (page - 1) * pageSize;
+//     const paginatedHotels = hotels.slice(start, start + pageSize);
+
+//     res.json({ paginatedHotels, total: hotels.length, page, pageSize });
+//   } catch (err) {
+//     console.error('Hotel search error:', err?.response?.status, err?.message);
+//     // Optional: gentle fallback instead of failing hard
+//     return res.json({
+//       paginatedHotels: [
+//         { id: 'H1', name: 'Sample Hotel', destination_id },
+//         { id: 'H2', name: 'Demo Inn', destination_id },
+//       ],
+//       total: 2,
+//       page: 1,
+//       pageSize: 10,
+//     });
+//   }
+// });
+
 // GET /api/hotels/:id - Get static hotel details by ID
 router.get('/:id', validateHotelId, async (req, res) => {
     try {
@@ -43,13 +83,16 @@ router.get('/:id', validateHotelId, async (req, res) => {
     }
 });
 
-// GET /api/hotels/:id/price - Get price for specific hotel
-router.get('/:id/price', validateHotelPrice, async (req, res) => {
+// GET /api/hotels/:id/prices - Get prices for specific hotel
+router.get('/:id/prices', validateHotelPrice, async (req, res) => {
     try {
         const hotelId = req.params.id;
         const { destination_id, checkin, checkout, guests, lang, currency, country_code } = req.query;
         
-        console.log('Fetching hotel price for:', hotelId, 'with params:', req.query);
+        console.log('=== PRICE FETCH REQUEST ===');
+        console.log('Hotel ID:', hotelId);
+        console.log('Query params:', req.query);
+        console.log('Timestamp:', new Date().toISOString());
         
         const priceData = await hotelService.getHotelPrice(
             hotelId, 
@@ -62,7 +105,17 @@ router.get('/:id/price', validateHotelPrice, async (req, res) => {
             country_code || 'SG'
         );
         
+        console.log('Price data result:', priceData ? 'SUCCESS' : 'NO DATA');
+        if (priceData) {
+            console.log('Price data keys:', Object.keys(priceData));
+            if (priceData.rooms) {
+                console.log('Number of rooms:', priceData.rooms.length);
+            }
+        }
+        console.log('=== END PRICE FETCH ===');
+        
         if (!priceData) {
+            console.log('Returning 404 - Price not found for hotel:', hotelId);
             return res.status(404).json({ 
                 error: 'Price not found',
                 message: `Price data for hotel ${hotelId} not found`
@@ -71,7 +124,12 @@ router.get('/:id/price', validateHotelPrice, async (req, res) => {
         
         res.json(priceData);
     } catch (error) {
-        console.error('Get hotel price error:', error);
+        console.error('=== PRICE FETCH ERROR ===');
+        console.error('Hotel ID:', req.params.id);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('=== END PRICE ERROR ===');
+        
         res.status(500).json({ 
             error: 'Failed to get hotel price',
             message: error.message 

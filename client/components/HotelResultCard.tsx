@@ -1,116 +1,76 @@
 // components/HotelResultCard.tsx
-import React from 'react';
+'use client';
 
-interface Hotel {
-  id: string;
-  name: string;
-  price: number;
-  rating: number;
-  address: string;
-  imageUrl?: string;
-  imageDetails?: {
-    prefix?: string;
-    suffix?: string;
-    count?: number;
-  };
-  amenities: string[];
-  freeCancellation: boolean;
-  searchRank: number;
-  latitude: number;
-  longitude: number;
-}
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import SafeHotelImage from './SafeHotelImage';
+import { Hotel } from '@/types/hotel';
 
-interface HotelResultCardProps {
-  hotel: Hotel;
-}
+export default function HotelResultCard({ hotel }: { hotel: Hotel }) {
+  const params = useSearchParams();
 
-const HotelResultCard: React.FC<HotelResultCardProps> = ({ hotel }) => {
-  // Generate star rating display
-  const stars = '⭐'.repeat(Math.min(Math.max(Math.floor(Number(hotel.rating || 0)), 0), 5));
-  
-  // Use the imageUrl if available, otherwise construct from imageDetails
-  const imgUrl = hotel.imageUrl || 
-    (hotel.imageDetails?.prefix && hotel.imageDetails?.suffix 
-      ? `${hotel.imageDetails.prefix}0${hotel.imageDetails.suffix}`
-      : '/placeholder-hotel.svg');
+  // Preserve search context
+  const query = new URLSearchParams(params.toString());
+  if (!query.get('rooms')) query.set('rooms', '1');
+  if (!query.get('guests') && !query.get('adults')) query.set('guests', '2');
 
-  // Format price
-  const formattedPrice = typeof hotel.price === 'number' 
-    ? hotel.price.toFixed(2) 
-    : hotel.price;
+  const href = `/hotel/${encodeURIComponent(hotel.id)}?${query.toString()}`;
+
+  const prefix =
+    hotel?.imageDetails?.prefix ??
+    'https://d2ey9sqrvkqdfs.cloudfront.net/'; // your CloudFront base
 
   return (
-    <div className="bg-white border rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-200 cursor-pointer">
-      {/* Hotel Image */}
-      <div className="relative h-48 w-full">
-        <img 
-          src={imgUrl} 
-          alt={hotel.name || 'Hotel'} 
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = '/placeholder-hotel.svg';
-          }}
+    <Link
+      href={href}
+      className="group grid grid-cols-[140px_1fr] gap-4 rounded-xl bg-white ring-1 ring-black/5 shadow hover:shadow-md transition overflow-hidden"
+    >
+      <div className="relative h-32 w-[140px]">
+        <SafeHotelImage
+          hotelId={hotel.id}
+          imageUrl={hotel.imageUrl}
+          fallbackPrefix={prefix}
+          fallbackIndex={0}
+          alt={hotel.name}
+          fill
+          quality={85}
+          sizes="140px"
+          priority={false}
         />
-        {hotel.freeCancellation && (
-          <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
-            Free Cancellation
-          </div>
-        )}
-        <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-sm px-2 py-1 rounded">
-          ${formattedPrice}
-        </div>
       </div>
 
-      {/* Hotel Details */}
-      <div className="p-4">
-        <h3 className="font-semibold text-lg text-gray-900 truncate mb-1">
-          {hotel.name || 'Unknown Hotel'}
-        </h3>
-        
-        {/* Rating */}
-        <div className="flex items-center mb-2">
-          <span className="text-yellow-400 mr-1">{stars}</span>
-          <span className="text-sm text-gray-600">
-            {hotel.rating ? `${hotel.rating} stars` : 'No rating'}
-          </span>
+      <div className="pr-4 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-neutral-900">
+            {hotel.name}
+          </h3>
+          {hotel.price != null && (
+            <div className="text-right">
+              <div className="text-[13px] text-neutral-500">from</div>
+              <div className="text-[15px] font-semibold text-neutral-900">
+                ${hotel.price.toFixed(0)}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Address */}
         {hotel.address && (
-          <p className="text-sm text-gray-600 truncate mb-2">
-            📍 {hotel.address}
-          </p>
+          <p className="mt-1 text-sm text-neutral-600 line-clamp-1">{hotel.address}</p>
         )}
 
-        {/* Amenities (first 3) */}
-        {hotel.amenities && hotel.amenities.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3">
-            {hotel.amenities.slice(0, 3).map((amenity, index) => (
-              <span 
-                key={index}
-                className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
-              >
-                {amenity}
-              </span>
-            ))}
-            {hotel.amenities.length > 3 && (
-              <span className="text-xs text-gray-500">
-                +{hotel.amenities.length - 3} more
-              </span>
-            )}
-          </div>
-        )}
+        <div className="mt-2 flex items-center gap-2 text-xs text-neutral-600">
+          {hotel.rating ? <span>⭐ {hotel.rating}</span> : null}
+          {hotel.freeCancellation ? (
+            <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700 ring-1 ring-emerald-200">
+              Free cancellation
+            </span>
+          ) : null}
+        </div>
 
-        {/* Price */}
-        <div className="flex justify-between items-center">
-          <span className="text-2xl font-bold text-indigo-600">
-            ${formattedPrice}
-          </span>
-          <span className="text-sm text-gray-500">per night</span>
+        <div className="mt-3 inline-flex items-center gap-2 text-[13px] font-medium text-indigo-700 group-hover:underline">
+          View details & book
         </div>
       </div>
-    </div>
+    </Link>
   );
-};
-
-export default HotelResultCard;
+}

@@ -128,10 +128,10 @@ async function testServerAPI() {
         console.log('✅ Hotel search Response Status:', searchResponse.status);
         console.log('   Page:', searchResponse.data.page);
         console.log('   Total hotels:', searchResponse.data.totalHotels);
-        console.log('   Hotels on this page:', searchResponse.data.hotels?.length || 0);
+        console.log('   Hotels on this page:', searchResponse.data.paginatedHotels?.length || 0);
         
-        if (searchResponse.data.hotels?.length > 0) {
-            const firstHotel = searchResponse.data.hotels[0];
+        if (searchResponse.data.paginatedHotels?.length > 0) {
+            const firstHotel = searchResponse.data.paginatedHotels[0];
             console.log('   First hotel:', firstHotel.name, '- Price:', firstHotel.price);
 
             // 2. Test specific hotel details

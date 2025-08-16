@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import HotelResultCard from '../components/HotelResultCard';
 import '@testing-library/jest-dom';
 
@@ -30,10 +30,23 @@ const testData = {
     hires_image_index: '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,19,20'
 }
 
-describe('HodelResultCard', () => {
-    it('renders hotel card', () => {
-        render(<HotelResultCard hotel={testData}/>);
-        expect(screen.getByText('Hotel 81 Geylang')).toBeInTheDocument();
-        expect(screen.getByText('$493.67')).toBeInTheDocument();
-    })
-})
+// describe('HodelResultCard', () => {
+//     it('renders hotel card', () => {
+//         render(<HotelResultCard hotel={testData}/>);
+//         expect(screen.getByText('Hotel 81 Geylang')).toBeInTheDocument();
+//         expect(screen.getByText('$493.67')).toBeInTheDocument();
+//     })
+// })
+
+describe('HotelResultCard', () => {
+  it('renders hotel card', () => {
+    render(<HotelResultCard hotel={testData} />);
+    expect(screen.getByText(/Hotel 81 Geylang/i)).toBeInTheDocument();
+
+    // Find the row that has "per night" and then assert the price inside that row
+    const priceRow = screen.getByText(/per night/i).closest('div');
+    if (!priceRow) throw new Error('Price row not found');
+
+    expect(within(priceRow).getByText(/\$\s*493\.67/)).toBeInTheDocument();
+  });
+});
