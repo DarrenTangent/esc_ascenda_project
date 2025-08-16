@@ -1,3 +1,4 @@
+// components/DestinationSearch.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -20,18 +21,22 @@ export default function DestinationSearch() {
   const [selectedDest, setSelectedDest] = useState<Destination | null>(null);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[Date, Date] | null>(null);
-  const [guests, setGuests] = useState(2);
-  const [rooms, setRooms] = useState(1);
+  const [guests, setGuests] = useState<number>(2);
+  const [rooms, setRooms] = useState<number>(1);
 
-  // --- prefill from URL (for back navigation or refresh) ---
+  // --- prefill from URL ---
   useEffect(() => {
     const destination = params.get('destination') || '';
     const guestsParam = params.get('guests');
     const roomsParam = params.get('rooms');
 
     if (destination) setQuery(destination);
-    if (guestsParam) setGuests(Number(guestsParam));
-    if (roomsParam) setRooms(Number(roomsParam));
+    if (guestsParam && !Number.isNaN(Number(guestsParam))) {
+      setGuests(Number(guestsParam));
+    }
+    if (roomsParam && !Number.isNaN(Number(roomsParam))) {
+      setRooms(Number(roomsParam));
+    }
   }, [params]);
 
   // --- destination search with debounce ---
@@ -78,23 +83,32 @@ export default function DestinationSearch() {
       alert('Please select a destination and travel dates.');
       return;
     }
+
     const [checkin, checkout] = dateRange;
     if (checkout <= checkin) {
       alert('Check-out must be after check-in.');
       return;
     }
 
+    // Ensure sane values
+    const safeRooms = Math.max(1, Math.floor(rooms || 1));
+    const safeGuests = Math.max(1, Math.floor(guests || 1));
+
     const checkinStr = formatDate(checkin);
     const checkoutStr = formatDate(checkout);
-    const guestsParam = Array(rooms).fill(guests).join('|'); // format like "2|2" if needed
 
-    router.push(
-      `/search?destination=${encodeURIComponent(
-        selectedDest.term
-      )}&destination_id=${encodeURIComponent(
-        selectedDest.uid
-      )}&checkin=${checkinStr}&checkout=${checkoutStr}&guests=${guestsParam}&rooms=${rooms}`
-    );
+    // IMPORTANT: keep guests numeric (no "2|2")
+    const searchParams = new URLSearchParams({
+      destination: selectedDest.term,
+      destination_id: selectedDest.uid,
+      checkin: checkinStr,
+      checkout: checkoutStr,
+      guests: String(safeGuests), // numeric only
+      adults: String(safeGuests), // extra for APIs that expect `adults`
+      rooms: String(safeRooms),
+    });
+
+    router.push(`/search?${searchParams.toString()}`);
   };
 
   return (
@@ -172,7 +186,7 @@ export default function DestinationSearch() {
             onChange={(e) => setGuests(Number(e.target.value))}
             className="h-11 w-full rounded-lg border border-neutral-300 px-3 outline-none ring-0 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
           >
-            {[1, 2, 3, 4, 5].map((n) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
               <option key={n} value={n}>
                 {n} {n > 1 ? 'guests' : 'guest'}
               </option>
@@ -211,4 +225,3 @@ export default function DestinationSearch() {
     </div>
   );
 }
-
