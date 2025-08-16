@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE_URL =
+  (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api').replace(/\/$/, '');
 
 interface BookingInfo {
   bookingId: string;
@@ -11,7 +12,7 @@ interface BookingInfo {
   checkIn: string;
   checkOut: string;
   guests: string;
-  rooms: string;
+  rooms: string | number;
   totalPrice: number;
   nights: number;
   firstName: string;
@@ -25,7 +26,7 @@ interface BookingInfo {
 export default function BookingConfirmation() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   const [booking, setBooking] = useState<BookingInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export default function BookingConfirmation() {
   const bookingId = searchParams?.get('bookingId');
   const sessionId = searchParams?.get('session_id');
 
+  // Verify payment if session present
   useEffect(() => {
     async function verifyIfNeeded() {
       if (bookingId && sessionId) {
@@ -50,6 +52,7 @@ export default function BookingConfirmation() {
     verifyIfNeeded();
   }, [bookingId, sessionId]);
 
+  // Load booking details
   useEffect(() => {
     async function fetchBooking() {
       if (!bookingId) {
@@ -57,10 +60,8 @@ export default function BookingConfirmation() {
         setLoading(false);
         return;
       }
-
       try {
         const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
-        
         if (response.ok) {
           const bookingData = await response.json();
           setBooking({
@@ -89,17 +90,11 @@ export default function BookingConfirmation() {
         setLoading(false);
       }
     }
-
     fetchBooking();
   }, [bookingId]);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleHome = () => {
-    router.push('/');
-  };
+  const handlePrint = () => window.print();
+  const handleHome = () => router.push('/');
 
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString('en-US', {
@@ -110,10 +105,7 @@ export default function BookingConfirmation() {
     });
 
   const formatPrice = (price: number) =>
-    new Intl.NumberFormat('en-SG', { 
-      style: 'currency', 
-      currency: 'SGD' 
-    }).format(price);
+    new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(price);
 
   if (loading) {
     return (
@@ -161,6 +153,12 @@ export default function BookingConfirmation() {
     );
   }
 
+  const roomsNum = typeof booking.rooms === 'string' ? parseInt(booking.rooms, 10) || 1 : booking.rooms;
+  const guestsNum = String(booking.guests)
+    .split('|')
+    .map((x) => Number(x) || 0)
+    .reduce((a, b) => a + b, 0);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -184,15 +182,17 @@ export default function BookingConfirmation() {
               <h2 className="text-xl font-semibold">Booking Information</h2>
               <p className="text-indigo-200">Booking ID: {booking.bookingId}</p>
             </div>
-            
+
             <div className="px-6 py-6 space-y-6">
-              {/* Guest Information */}
+              {/* Guest */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Guest Information</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500">Full Name</p>
-                    <p className="font-medium">{booking.firstName} {booking.lastName}</p>
+                    <p className="font-medium">
+                      {booking.firstName} {booking.lastName}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-500">Email</p>
@@ -201,13 +201,13 @@ export default function BookingConfirmation() {
                 </div>
               </div>
 
-              {/* Hotel Details */}
+              {/* Hotel */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Hotel Details</h3>
                 <p className="text-xl font-medium text-gray-800">{booking.hotelName}</p>
               </div>
 
-              {/* Stay Details */}
+              {/* Stay */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Stay Details</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -227,15 +227,11 @@ export default function BookingConfirmation() {
                   </div>
                   <div>
                     <p className="text-gray-500">Guests</p>
-                    <p className="font-medium">
-                      {booking.guests} guest{parseInt(booking.guests) > 1 ? 's' : ''}
-                    </p>
+                    <p className="font-medium">{guestsNum} guest{guestsNum > 1 ? 's' : ''}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Rooms</p>
-                    <p className="font-medium">
-                      {booking.rooms} room{parseInt(booking.rooms) > 1 ? 's' : ''}
-                    </p>
+                    <p className="font-medium">{roomsNum} room{roomsNum > 1 ? 's' : ''}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Room Description</p>
@@ -244,15 +240,14 @@ export default function BookingConfirmation() {
                 </div>
               </div>
 
-              {/* Total Amount */}
+              {/* Price */}
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold text-gray-900">Total Amount</span>
                   <span className="text-2xl font-bold text-indigo-600">{formatPrice(booking.totalPrice)}</span>
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  Payment processed on{' '}
-                  {new Date(booking.bookingDate).toLocaleDateString()}
+                  Payment processed on {new Date(booking.bookingDate).toLocaleDateString()}
                 </p>
               </div>
 
@@ -263,7 +258,7 @@ export default function BookingConfirmation() {
                 </span>
               </div>
 
-              {/* Action Buttons */}
+              {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <button
                   onClick={handlePrint}
@@ -287,11 +282,8 @@ export default function BookingConfirmation() {
             </div>
           </div>
 
-          {/* Important Information */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-            <h4 className="font-medium text-blue-900 mb-2">
-              Important Information
-            </h4>
+            <h4 className="font-medium text-blue-900 mb-2">Important Information</h4>
             <ul className="text-sm text-blue-700 space-y-1 text-left">
               <li>• Please bring a valid ID and this confirmation for check-in</li>
               <li>• Check-in time is typically 3:00 PM, check-out is 11:00 AM</li>

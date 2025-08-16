@@ -1,16 +1,13 @@
-
+// client/components/BookingForm.jsx
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { startStripeCheckout } from '@/utils/stripeCheckout';
 
 export default function BookingForm() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  
 
   const hotelId = params?.id;
   const destination_id = searchParams?.get('destination_id');
@@ -41,7 +38,6 @@ export default function BookingForm() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // now that states exist, it's safe to read them
   const roomDescFromQuery = searchParams?.get('room_desc') || '';
   const selectedRoomDescription = useMemo(() => {
     return (
@@ -55,27 +51,21 @@ export default function BookingForm() {
   const API_BASE =
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:5001';
 
-const calculateNights = () => {
-  if (!checkin || !checkout) return 0;
-  const start = new Date(checkin);
-  const end = new Date(checkout);
-  return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000));
-};
-
-const getTotalPrice = () => {
-  const nightly = Number(hotelPrice?.price ?? 0);
-  return nightly * calculateNights();
-};
-
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-SG', {
-      style: 'currency',
-      currency: 'SGD'
-    }).format(price);
+  const calculateNights = () => {
+    if (!checkin || !checkout) return 0;
+    const start = new Date(checkin);
+    const end = new Date(checkout);
+    return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000));
   };
 
-  // ===== Event handlers =====
+  const getTotalPrice = () => {
+    const nightly = Number(hotelPrice?.price ?? 0);
+    return nightly * calculateNights();
+  };
+
+  const formatPrice = (price) =>
+    new Intl.NumberFormat('en-SG', { style: 'currency', currency: 'SGD' }).format(price);
+
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
@@ -86,14 +76,29 @@ const getTotalPrice = () => {
     try {
       setSubmitting(true);
 
+      // NEW: read signed-in user (if any) to link booking
+      let accountUserId;
+      let accountEmail;
+      try {
+        const raw = localStorage.getItem('user');
+        if (raw) {
+          const u = JSON.parse(raw);
+          accountUserId = u.id || u._id;
+          accountEmail = u.email;
+        }
+      } catch {}
+
       const nights = calculateNights();
       const payload = {
+        // Guest
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
         specialRequests: formData.specialRequests,
         billingAddress: formData.billingAddress,
+
+        // Hotel / stay
         hotelId,
         hotelName: hotelDetails?.name || '',
         hotelAddress: hotelDetails?.address || '',
@@ -103,23 +108,21 @@ const getTotalPrice = () => {
         rooms,
         nights,
         totalPrice: getTotalPrice(),
-        // NEW: send room description
-  roomDescription:
-    roomDescFromQuery ||
-    hotelPrice?.roomDescription ||
-    hotelDetails?.roomDescription ||
-    '',
+
+        // Optional details
+        roomDescription: selectedRoomDescription || '',
+
+        // NEW: account linkage
+        accountUserId,
+        accountEmail,
       };
 
-      // 1. Create booking
+      // 1) Create booking
       const bookingRes = await fetch(`${API_BASE}/api/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      console.log('hotelPrice ->', hotelPrice);
-console.log('nights ->', calculateNights());
-console.log('total ->', getTotalPrice());
 
       if (!bookingRes.ok) {
         const errorText = await bookingRes.text();
@@ -135,10 +138,8 @@ console.log('total ->', getTotalPrice());
         alert('Booking failed — please try again.');
         return;
       }
-      console.log("hotelPrice", hotelPrice);
-console.log("total price", getTotalPrice());
 
-      // 2. Create Stripe session
+      // 2) Create Stripe Checkout session (if you’re using Stripe)
       const totalCents = Math.round(getTotalPrice() * 100);
       const stripeRes = await fetch(`${API_BASE}/api/payments/create-checkout-session`, {
         method: 'POST',
@@ -165,8 +166,7 @@ console.log("total price", getTotalPrice());
         return;
       }
 
-      // Redirect to Stripe Checkout
-      window.location.href = stripeData.url;
+      window.location.href = stripeData.url; // redirect to Stripe
 
     } catch (err) {
       console.error(err);
@@ -176,67 +176,59 @@ console.log("total price", getTotalPrice());
     }
   };
 
-  // ===== Fetch hotel data =====
+  // Fetch hotel data / pricing
   useEffect(() => {
     async function fetchBookingData() {
       if (!hotelId || !destination_id || !checkin || !checkout || !guests) {
         setLoading(false);
         return;
       }
-
       try {
-        // Fetch hotel details
         const hotelRes = await fetch(`${API_BASE}/api/hotels/${hotelId}`);
         if (hotelRes.ok) {
           const hotelData = await hotelRes.json();
           setHotelDetails(hotelData);
         }
 
-        // Fetch hotel pricing
-        // replace the old fetch to /price with this:
-const priceRes = await fetch(
-  `${API_BASE}/api/hotels/${hotelId}/prices?destination_id=${destination_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests}`
-);
-if (priceRes.ok) {
-  const priceData = await priceRes.json();
+        const priceRes = await fetch(
+          `${API_BASE}/api/hotels/${hotelId}/prices?destination_id=${destination_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests}`
+        );
+        if (priceRes.ok) {
+          const priceData = await priceRes.json();
 
-  // pick a price: prefer top-level price, else first room’s price
-  const nightly =
-    typeof priceData.price === 'number'
-      ? priceData.price
-      : Number(priceData?.rooms?.[0]?.price ?? 0);
+          const nightly =
+            typeof priceData.price === 'number'
+              ? priceData.price
+              : Number(priceData?.rooms?.[0]?.price ?? 0);
 
-  const inferredRoomDesc =
-    priceData?.rooms?.[0]?.roomDescription ||
-    priceData?.roomDescription ||
-    roomDescFromQuery || // from URL if you passed it
-    '';
+          const inferredRoomDesc =
+            priceData?.rooms?.[0]?.roomDescription ||
+            priceData?.roomDescription ||
+            roomDescFromQuery ||
+            '';
 
-  setHotelPrice({
-    price: nightly,
-    roomDescription: inferredRoomDesc,
-    freeCancellation: priceData?.freeCancellation,
-  });
-}
-
-} catch (error) {
+          setHotelPrice({
+            price: nightly,
+            roomDescription: inferredRoomDesc,
+            freeCancellation: priceData?.freeCancellation,
+          });
+        }
+      } catch (error) {
         console.error('Error fetching booking data:', error);
       } finally {
         setLoading(false);
       }
     }
-
     fetchBookingData();
-  }, [hotelId, destination_id, checkin, checkout, guests, API_BASE]);
+  }, [hotelId, destination_id, checkin, checkout, guests, API_BASE, roomDescFromQuery]);
 
-  // ===== Styles =====
+  // Styles (unchanged)
   const inputStyle = {
     width: '100%', padding: '10px', marginBottom: '12px',
     borderRadius: '5px', border: '1px solid #ccc', fontSize: '14px'
   };
   const labelStyle = { fontWeight: 'bold', marginBottom: '4px', display: 'block' };
 
-  // ===== Loading state =====
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
@@ -245,10 +237,9 @@ if (priceRes.ok) {
     );
   }
 
-  // ===== Render =====
   return (
     <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
-      {/* Booking Summary */}
+      {/* Summary */}
       {hotelDetails && (
         <div style={{
           marginBottom: '30px', padding: '20px', border: '1px solid #eee',
@@ -293,7 +284,7 @@ if (priceRes.ok) {
         </div>
       )}
 
-      {/* Booking Form */}
+      {/* Form */}
       <div style={{
         padding: '20px', border: '1px solid #eee', borderRadius: '10px',
         backgroundColor: '#f9f9f9', boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
@@ -317,12 +308,11 @@ if (priceRes.ok) {
           <textarea name="specialRequests" onChange={handleChange}
             style={{ ...inputStyle, height: '80px' }} />
 
+          {/* Demo card fields (not sent raw to server) */}
           <label style={labelStyle}>Card Number</label>
           <input name="cardNumber" onChange={handleChange} style={inputStyle} />
-
           <label style={labelStyle}>Expiry</label>
           <input name="expiry" onChange={handleChange} style={inputStyle} />
-
           <label style={labelStyle}>CVV</label>
           <input name="cvv" onChange={handleChange} style={inputStyle} />
 

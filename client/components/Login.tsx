@@ -2,48 +2,32 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
-const Login = () => {
+export default function Login() {
+  const router = useRouter();
+  const { login } = useAuth();
+
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData((s) => ({ ...s, [e.target.name]: e.target.value }));
 
-  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    void handleSubmit(e as React.FormEvent);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setError(null);
+    const res = await login(formData.email, formData.password);
+    setLoading(false);
 
-    try {
-      const res = await fetch('http://localhost:5001/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSuccess('Login successful!');
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setFormData({ email: '', password: '' });
-      } else {
-        setError(data.error || 'Login failed');
-      }
-    } catch (err) {
-      setError('Network error. Please try again.');
-      console.error(err);
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      setError(res.error || 'Login failed');
+      return;
     }
+    router.push('/'); // go home (or /account) after login
   };
 
   return (
@@ -58,7 +42,7 @@ const Login = () => {
         </p>
 
         <div className="mt-8 rounded-2xl bg-white/70 p-6 shadow-xl ring-1 ring-black/5 backdrop-blur-md">
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={onSubmit}>
             <div>
               <label className="block text-sm font-medium text-[#1E3A8A]">Email address</label>
               <input
@@ -100,7 +84,7 @@ const Login = () => {
             </div>
 
             <button
-              onClick={handleButtonClick}
+              type="submit"
               disabled={loading}
               className="w-full rounded-lg bg-[#3B82F6] py-2 font-semibold text-white hover:bg-[#2563EB] disabled:opacity-60"
             >
@@ -108,12 +92,9 @@ const Login = () => {
             </button>
 
             {error && <div className="rounded-md bg-red-100 p-3 text-red-700">{error}</div>}
-            {success && <div className="rounded-md bg-green-100 p-3 text-green-700">{success}</div>}
           </form>
         </div>
       </div>
     </div>
   );
-};
-
-export default Login;
+}

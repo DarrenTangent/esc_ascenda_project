@@ -1,7 +1,7 @@
-// app/layout.tsx
 import './globals.css';
 import React from 'react';
 import Header from '@/components/Header';
+import Providers from './providers';
 
 export default function RootLayout({
   children,
@@ -11,8 +11,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <Header />
-        {children}
+        <Providers>
+          <Header />
+          {children}
+        </Providers>
       </body>
     </html>
   );

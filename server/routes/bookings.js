@@ -1,37 +1,41 @@
-
-
-
-// module.exports = router;
+// server/routes/bookings.js
 const express = require('express');
 const router = express.Router();
 const Booking = require('../models/Booking');
 const { sendBookingConfirmation } = require('../services/emailService');
 
-// POST /api/bookings
+/**
+ * POST /api/bookings
+ */
 router.post('/', async (req, res) => {
   try {
     if (!req.is('application/json')) {
       return res.status(415).json({ error: 'Only JSON requests are supported' });
     }
 
-    // simple injection guard (kept from your version)
-    const sqlLike = /('|--|;|\/\*|\*\/|\bor\s*1\s*=\s*1\b|\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE|EXEC)\b)/i;
-    for (const [, v] of Object.entries(req.body)) {
+    const sqlLike =
+      /('|--|;|\/\*|\*\/|\bor\s*1\s*=\s*1\b|\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE|EXEC)\b)/i;
+    for (const [, v] of Object.entries(req.body || {})) {
       if (typeof v === 'string' && sqlLike.test(v)) {
         return res.status(400).json({ error: 'Invalid characters detected' });
       }
     }
 
-    // Strip raw card, keep last4 + meta
     const {
       cardNumber,
       expiry,
       cvv,
+
       paymentIntentId,
       cardBrand,
-      roomDescription, // ✅ Added here
+
+      roomDescription,
+
+      accountUserId,
+      accountEmail,
+
       ...rest
-    } = req.body;
+    } = req.body || {};
 
     const cardLast4 =
       typeof cardNumber === 'string'
@@ -46,46 +50,74 @@ router.post('/', async (req, res) => {
       checkOut: rest.checkOut ? new Date(rest.checkOut) : null,
       nights: rest.nights,
       totalPrice: rest.totalPrice,
-      paymentIntentId,
-      cardBrand,
-      cardLast4,
+      paymentIntentId: paymentIntentId || null,
+      cardBrand: cardBrand || null,
+      cardLast4: cardLast4 || null,
       paid: !!paymentIntentId,
-      roomDescription, // ✅ Now correctly set from req.body
+      roomDescription: roomDescription || null,
+      accountUserId: accountUserId || null,
+      accountEmail: accountEmail || null,
     });
 
     await booking.validate();
     await booking.save();
 
-    // Replace this with your actual frontend base URL
-const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+    const frontendBaseUrl =
+      process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+    const confirmationUrl = `${frontendBaseUrl}/booking/confirmation?bookingId=${booking._id}`;
 
-// Build the confirmation page link with bookingId
-const confirmationUrl = `${frontendBaseUrl}/booking/confirmation?bookingId=${booking._id}`;
+    sendBookingConfirmation(booking.email, booking, confirmationUrl).catch(() => {});
 
-// Fire-and-forget email (don’t fail request on email error)
-sendBookingConfirmation(booking.email, booking, confirmationUrl).catch(() => {});
-
-    res.status(201).json({ message: 'Booking created', booking });
+    return res.status(201).json({ message: 'Booking created', booking });
   } catch (err) {
-    if (err.name === 'ValidationError') {
+    if (err && err.name === 'ValidationError') {
       return res.status(400).json({ error: 'Validation failed' });
     }
     console.error('Create booking error:', err);
-    res.status(500).json({ error: 'Failed to save booking' });
+    return res.status(500).json({ error: 'Failed to save booking' });
   }
 });
 
-// GET /api/bookings/:id
+/**
+ * GET /api/bookings/by-account?userId=...&email=...
+ * NOTE: must come BEFORE '/:id'
+ */
+router.get('/by-account', async (req, res) => {
+  try {
+    const { userId, email } = req.query;
+
+    if (!userId && !email) {
+      return res.status(400).json({ error: 'userId or email required' });
+    }
+
+    const q = {};
+    if (userId) q.accountUserId = String(userId);
+    if (email) q.accountEmail = String(email);
+
+    const bookings = await Booking.find(q).sort({ createdAt: -1 }).lean();
+
+    return res.json({ bookings });
+  } catch (err) {
+    console.error('Error fetching bookings by account:', err);
+    return res.status(500).json({ error: 'Failed to load bookings' });
+  }
+});
+
+/**
+ * GET /api/bookings/:id
+ * (Place AFTER /by-account)
+ */
 router.get('/:id', async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
+    const id = String(req.params.id);
+    const booking = await Booking.findById(id).lean();
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found' });
     }
-    res.json(booking);
+    return res.json(booking);
   } catch (err) {
     console.error('Error fetching booking:', err);
-    res.status(500).json({ error: 'Server error, please try again later' });
+    return res.status(500).json({ error: 'Server error, please try again later' });
   }
 });
 
