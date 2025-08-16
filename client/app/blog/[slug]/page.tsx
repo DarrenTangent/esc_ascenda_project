@@ -1,14 +1,13 @@
+// app/blog/[slug]/page.tsx
 import Image from 'next/image';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-static';
 
-type Props = { params: { slug: string } };
+type PostData = { title: string; body: string; credits?: string; image?: string };
 
-const posts: Record<
-  string,
-  { title: string; body: string; credits?: string; image?: string }
-> = {
+const posts: Record<string, PostData> = {
   'hidden-gems-bali': {
     title: '10 Hidden Gems in Bali (Beyond the Usual Spots)',
     body:
@@ -29,34 +28,23 @@ const posts: Record<
   },
 };
 
-export default function BlogPostPage({ params }: Props) {
-  const post = posts[params.slug];
+export default async function BlogPostPage({
+  params,
+}: {
+  // NOTE: params is a Promise in Next 15 for dynamic routes
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const post = posts[slug];
 
-  if (!post) {
-    return (
-      <div className="min-h-screen bg-gray-900">
-        <div className="mx-auto max-w-3xl px-6 py-20 text-white">
-          <h1 className="text-3xl font-bold">Article not found</h1>
-          <p className="mt-2 text-gray-400">
-            This post may have moved or been removed.
-          </p>
-          <Link
-            href="/blog"
-            className="mt-6 inline-block rounded-md bg-blue-500 px-4 py-2 text-black"
-          >
-            Back to blog
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (!post) return notFound();
 
-  const heroSrc = post.image ?? `/blog/${params.slug}.jpg`;
+  const heroSrc = post.image ?? `/blog/${slug}.jpg`;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-blue-600 text-white">
       {/* Hero image */}
-      <div className="relative h-[38vh] min-h-[280px] w-full overflow-hidden bg-gray-800">
+      <div className="relative h-[38vh] min-h-[280px] w-full overflow-hidden">
         <Image
           src={heroSrc}
           alt={post.title}
@@ -71,9 +59,8 @@ export default function BlogPostPage({ params }: Props) {
       {/* Article */}
       <article className="mx-auto max-w-3xl px-6 py-10">
         <h1 className="text-4xl font-extrabold tracking-tight">{post.title}</h1>
-
         {post.credits ? (
-          <p className="mt-3 text-sm text-gray-400">{post.credits}</p>
+          <p className="mt-3 text-sm text-white/80">{post.credits}</p>
         ) : null}
 
         <div className="prose prose-invert mt-8 max-w-none">
@@ -88,7 +75,7 @@ export default function BlogPostPage({ params }: Props) {
 
         <Link
           href="/blog"
-          className="mt-10 inline-block rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-black hover:bg-blue-400"
+          className="mt-10 inline-block rounded-md bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-white/90"
         >
           Back to blog
         </Link>
