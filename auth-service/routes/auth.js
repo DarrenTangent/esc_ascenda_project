@@ -1,4 +1,4 @@
-// src/routes/auth.js
+// routes/auth.js
 import { Router } from 'express';
 import { signup, login, logout } from '../controllers/authController.js';
 import { refreshAccessToken } from '../controllers/tokenController.js';
