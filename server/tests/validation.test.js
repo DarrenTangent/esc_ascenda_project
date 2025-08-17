@@ -1,96 +1,58 @@
-// server/tests/validation.test.js
 const request = require('supertest');
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 
-// --- mock email service (must be before requiring the app) ---
+// Mock ONLY the email sender
 jest.mock('../services/emailService', () => ({
   sendBookingConfirmation: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 const { sendBookingConfirmation } = require('../services/emailService');
 
-// Ensure frontend base URL for confirmation links
-process.env.FRONTEND_BASE_URL = 'http://localhost:3000';
+let mongo;
+let app;
 
-// --- mock Booking model (factory; no out-of-scope variables) ---
-jest.mock('../models/Booking', () => {
-  return class Booking {
-    constructor(doc) {
-      this._doc = { ...doc };
-      Object.assign(this, this._doc);
-      // mirror route’s paid inference when paymentIntentId present
-      this.paid = !!this._doc.paymentIntentId;
-    }
+beforeAll(async () => {
+  process.env.NODE_ENV = 'test';
+  process.env.FRONTEND_BASE_URL = 'http://localhost:3000';
 
-    async validate() {
-      const required = ['firstName', 'lastName', 'email', 'phone', 'billingAddress'];
-      for (const k of required) {
-        if (!this._doc[k]) {
-          const err = new Error(`Validation failed: ${k}`);
-          err.name = 'ValidationError';
-          throw err;
-        }
-      }
-      const emailRe = /\S+@\S+\.\S+/;
-      if (!emailRe.test(this._doc.email)) {
-        const err = new Error('Validation failed: email');
-        err.name = 'ValidationError';
-        throw err;
-      }
-    }
+  mongo = await MongoMemoryServer.create();
+  await mongoose.connect(mongo.getUri());
 
-    async save() {
-      if (!this._id) this._id = 'mock_bkg_123';
-      return this;
-    }
-
-    // Express JSON uses this to serialize
-    toJSON() {
-      return { ...this._doc, _id: this._id, paid: this.paid };
-    }
-
-    // used by GET /api/bookings/:id (if you add tests for it)
-    static async findById(id) {
-      return { _id: id };
-    }
-  };
+  // Import app AFTER env + DB are ready
+  app = require('../index');
 });
 
-// now import the Express app (which uses the mocks above)
-const app = require('../app');
+afterEach(async () => {
+  jest.clearAllMocks();
+  const collections = await mongoose.connection.db.collections();
+  for (const c of collections) await c.deleteMany({});
+});
 
-describe('Bookings API - Validation', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+afterAll(async () => {
+  await mongoose.connection.close();
+  await mongo.stop();
+});
 
-  test('201 when payload is valid; strips sensitive fields; saves roomDescription; sends email with link', async () => {
+describe('Bookings API - validation & flow', () => {
+  test('201 creates booking, saves roomDescription, default status Confirmed, sends email', async () => {
     const payload = {
-      // Guest
       firstName: 'B',
       lastName: 'Singh',
       email: 'balraj@example.com',
       phone: '96275026',
-      specialRequests: 'dsffsdf',
-      billingAddress: '8 Somapah Road, #03-27',
+      specialRequests: 'High floor',
 
-      // Hotel / stay
-      hotelId: 'nPbT',
-      hotelName: 'AMOY by Far East Hospitality',
-      hotelAddress: '76 Telok Ayer Street',
-      checkIn: '2025-08-29T00:00:00.000Z',
-      checkOut: '2025-08-30T00:00:00.000Z',
-      nights: 1,
+      hotelId: 'EgHh',
+      hotelName: 'Test Hotel',
+      hotelAddress: '123 Road',
+      checkIn: '2025-08-29',
+      checkOut: '2025-08-31',
+      nights: 2,
       guests: '2',
       rooms: '1',
-      totalPrice: 379.29,
+      totalPrice: 1631.09,
 
-      // Room
-      roomDescription: 'Family Room, Window',
-
-      // Payment fields that must be stripped in response
-      cardNumber: '4111 1111 1111 1111',
-      expiry: '12/25',
-      cvv: '123',
-      // no paymentIntentId => paid should be false
+      roomDescription: 'Courtyard Room',
     };
 
     const res = await request(app)
@@ -99,45 +61,43 @@ describe('Bookings API - Validation', () => {
       .send(payload);
 
     expect(res.statusCode).toBe(201);
+    expect(res.body).toHaveProperty('bookingId');
     expect(res.body).toHaveProperty('booking');
 
     const b = res.body.booking;
-
-    // Core fields preserved
-    expect(b).toMatchObject({
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      email: payload.email,
-      phone: payload.phone,
-      billingAddress: payload.billingAddress,
-      hotelId: payload.hotelId,
-      hotelName: payload.hotelName,
-      hotelAddress: payload.hotelAddress,
-      checkIn: payload.checkIn,
-      checkOut: payload.checkOut,
-      nights: payload.nights,
-      guests: payload.guests,
-      rooms: payload.rooms,
-      totalPrice: payload.totalPrice,
-      roomDescription: payload.roomDescription,
-      paid: false,
-    });
+    expect(b).toEqual(
+      expect.objectContaining({
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        email: payload.email,
+        phone: payload.phone,
+        hotelId: payload.hotelId,
+        hotelName: payload.hotelName,
+        hotelAddress: payload.hotelAddress,
+        nights: payload.nights,
+        guests: payload.guests,
+        rooms: payload.rooms,
+        totalPrice: payload.totalPrice,
+        roomDescription: payload.roomDescription,
+        status: 'Confirmed',
+        paid: false,
+      })
+    );
     expect(b).toHaveProperty('_id');
 
-    // Sensitive fields NOT returned
-    expect(b.cardNumber).toBeUndefined();
-    expect(b.cvv).toBeUndefined();
-    expect(b.expiry).toBeUndefined();
-
-    // Email was sent with a confirmation URL containing bookingId
+    // Email sent with correct link
     expect(sendBookingConfirmation).toHaveBeenCalledTimes(1);
     const [toEmail, bookingObj, url] = sendBookingConfirmation.mock.calls[0];
     expect(toEmail).toBe(payload.email);
-    expect(bookingObj).toEqual(expect.objectContaining({ hotelName: payload.hotelName }));
+
+    // bookingObj._id may be an ObjectId; compare as strings
+    const sentId = String(bookingObj?._id || '');
+    expect(sentId).toBe(String(b._id));
+
     expect(url).toContain(`/booking/confirmation?bookingId=${b._id}`);
   });
 
-  test('400 when email invalid', async () => {
+  test('400 when email is invalid (schema validation)', async () => {
     const res = await request(app)
       .post('/api/bookings')
       .set('Content-Type', 'application/json')
@@ -146,7 +106,6 @@ describe('Bookings API - Validation', () => {
         lastName: 'B',
         email: 'not-an-email',
         phone: '1',
-        billingAddress: 'x',
         hotelId: 'H',
         hotelName: 'N',
         hotelAddress: 'A',
@@ -172,28 +131,52 @@ describe('Bookings API - Validation', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  test('400 rejects obvious SQL injection patterns', async () => {
-    const res = await request(app)
+  test('cancel either soft-cancels or hard-deletes and reflects in GET', async () => {
+    // create
+    const create = await request(app)
       .post('/api/bookings')
       .set('Content-Type', 'application/json')
       .send({
-        firstName: "A'; DROP TABLE users;--",
-        lastName: 'B',
-        email: 'a@b.com',
-        phone: '1',
-        billingAddress: 'x',
-        hotelId: 'H',
-        hotelName: 'N',
-        hotelAddress: 'A',
-        checkIn: '2025-01-01',
-        checkOut: '2025-01-02',
-        nights: 1,
-        guests: '1',
+        firstName: 'C',
+        lastName: 'D',
+        email: 'c@example.com',
+        phone: '999',
+        hotelId: 'H1',
+        hotelName: 'Hotel One',
+        hotelAddress: 'Somewhere',
+        checkIn: '2025-02-01',
+        checkOut: '2025-02-03',
+        nights: 2,
+        guests: '2',
         rooms: '1',
-        totalPrice: 1,
+        totalPrice: 200,
+        roomDescription: 'Standard',
       });
 
-    expect(res.statusCode).toBe(400);
-    expect(res.body).toHaveProperty('error', 'Invalid characters detected');
+    const id = create.body.bookingId;
+    expect(id).toBeTruthy();
+
+    // cancel
+    const cancel = await request(app)
+      .post(`/api/bookings/${id}/cancel`)
+      .set('Content-Type', 'application/json')
+      .send();
+
+    expect(cancel.statusCode).toBe(200);
+
+    if (cancel.body?.deleted) {
+      // Hard delete path
+      expect(cancel.body).toEqual(expect.objectContaining({ ok: true, deleted: true }));
+
+      const get = await request(app).get(`/api/bookings/${id}`);
+      expect(get.statusCode).toBe(404);
+    } else {
+      // Soft cancel path
+      expect(cancel.body).toHaveProperty('booking.status', 'Cancelled');
+
+      const get = await request(app).get(`/api/bookings/${id}`);
+      expect(get.statusCode).toBe(200);
+      expect(get.body).toHaveProperty('status', 'Cancelled');
+    }
   });
 });

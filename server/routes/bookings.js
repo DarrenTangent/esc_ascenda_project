@@ -1,91 +1,94 @@
 
 
 
-// module.exports = router;
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
+
 const Booking = require('../models/Booking');
 const { sendBookingConfirmation } = require('../services/emailService');
 
-// POST /api/bookings
+// CREATE BOOKING
 router.post('/', async (req, res) => {
   try {
     if (!req.is('application/json')) {
       return res.status(415).json({ error: 'Only JSON requests are supported' });
     }
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ error: 'Database not connected' });
+    }
 
-    // simple injection guard (kept from your version)
-    const sqlLike = /('|--|;|\/\*|\*\/|\bor\s*1\s*=\s*1\b|\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE|EXEC)\b)/i;
-    for (const [, v] of Object.entries(req.body)) {
-      if (typeof v === 'string' && sqlLike.test(v)) {
-        return res.status(400).json({ error: 'Invalid characters detected' });
+    const {
+      firstName, lastName, email, phone, specialRequests,
+      hotelId, hotelName, hotelAddress,
+      checkIn, checkOut, nights, guests, rooms, totalPrice,
+      roomDescription,
+    } = req.body || {};
+
+    const required = { firstName, lastName, email, phone, hotelName, checkIn, checkOut, nights, guests, rooms, totalPrice };
+    for (const k of Object.keys(required)) {
+      const v = required[k];
+      if (v === undefined || v === null || v === '') {
+        return res.status(400).json({ error: `Missing required field: ${k}` });
       }
     }
 
-    // Strip raw card, keep last4 + meta
-    const {
-      cardNumber,
-      expiry,
-      cvv,
-      paymentIntentId,
-      cardBrand,
-      roomDescription, // ✅ Added here
-      ...rest
-    } = req.body;
-
-    const cardLast4 =
-      typeof cardNumber === 'string'
-        ? cardNumber.replace(/[\s-]/g, '').slice(-4)
-        : undefined;
+    const ci = new Date(checkIn);
+    const co = new Date(checkOut);
+    if (Number.isNaN(ci.getTime()) || Number.isNaN(co.getTime())) {
+      return res.status(400).json({ error: 'Invalid check-in/check-out dates' });
+    }
 
     const booking = new Booking({
-      ...rest,
-      hotelName: rest.hotelName,
-      hotelAddress: rest.hotelAddress,
-      checkIn: rest.checkIn ? new Date(rest.checkIn) : null,
-      checkOut: rest.checkOut ? new Date(rest.checkOut) : null,
-      nights: rest.nights,
-      totalPrice: rest.totalPrice,
-      paymentIntentId,
-      cardBrand,
-      cardLast4,
-      paid: !!paymentIntentId,
-      roomDescription, // ✅ Now correctly set from req.body
+      firstName, lastName, email, phone, specialRequests,
+      hotelId, hotelName, hotelAddress,
+      checkIn: ci, checkOut: co,
+      nights, guests, rooms, totalPrice,
+      roomDescription,
+      // status defaults in schema; you set it to "Confirmed"
     });
 
-    await booking.validate();
     await booking.save();
 
-    // Replace this with your actual frontend base URL
-const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+    const frontendBaseUrl = process.env.FRONTEND_BASE_URL || process.env.CLIENT_URL || 'http://localhost:3000';
+    const confirmationUrl = `${frontendBaseUrl}/booking/confirmation?bookingId=${booking._id}`;
+    sendBookingConfirmation(booking.email, booking, confirmationUrl).catch(() => {});
 
-// Build the confirmation page link with bookingId
-const confirmationUrl = `${frontendBaseUrl}/booking/confirmation?bookingId=${booking._id}`;
-
-// Fire-and-forget email (don’t fail request on email error)
-sendBookingConfirmation(booking.email, booking, confirmationUrl).catch(() => {});
-
-    res.status(201).json({ message: 'Booking created', booking });
+    return res.status(201).json({ message: 'Booking created', bookingId: booking._id, booking });
   } catch (err) {
-    if (err.name === 'ValidationError') {
-      return res.status(400).json({ error: 'Validation failed' });
-    }
     console.error('Create booking error:', err);
-    res.status(500).json({ error: 'Failed to save booking' });
+    const status = err?.name === 'ValidationError' ? 400 : 500;
+    return res.status(status).json({ error: err?.message || 'Failed to save booking' });
   }
 });
 
-// GET /api/bookings/:id
+// GET BOOKING BY ID
 router.get('/:id', async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
-    if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
-    }
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
     res.json(booking);
   } catch (err) {
     console.error('Error fetching booking:', err);
     res.status(500).json({ error: 'Server error, please try again later' });
+  }
+});
+
+// CANCEL BOOKING -> HARD DELETE
+router.post('/:id/cancel', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ error: 'Database not connected' });
+    }
+    const id = req.params.id;
+    const existing = await Booking.findById(id);
+    if (!existing) return res.status(404).json({ error: 'Booking not found' });
+
+    await Booking.deleteOne({ _id: id });
+    return res.json({ ok: true, deleted: true });
+  } catch (e) {
+    console.error('Cancel/Delete booking error:', e);
+    return res.status(500).json({ error: 'Failed to cancel booking' });
   }
 });
 
