@@ -1,4 +1,3 @@
-// components/Header.tsx
 'use client';
 
 import Link from 'next/link';
@@ -6,11 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 type NavLink = { href: string; label: string };
-
-// **Only About + Blog now**
 const NAV_LINKS: NavLink[] = [
   { href: '/about', label: 'About' },
   { href: '/blog',  label: 'Blog'  },
+  { href: '/bookings', label: 'My bookings' },
 ];
 
 export default function Header() {
@@ -19,7 +17,6 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
 
-  // Transparent only on the homepage
   const isHome = pathname === '/' || pathname === '/home';
 
   useEffect(() => {
@@ -29,50 +26,42 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Simple “auth” read (your Login.tsx writes these)
   useEffect(() => {
     try {
       const raw = localStorage.getItem('user');
       if (raw) {
         const u = JSON.parse(raw);
         setUserName(u?.username || u?.email || 'Account');
-      } else {
-        setUserName(null);
-      }
-    } catch {
-      setUserName(null);
-    }
+      } else setUserName(null);
+    } catch { setUserName(null); }
   }, [pathname]);
 
-  // Header skin
   const wrapperClass = useMemo(() => {
     if (isHome) {
       return scrolled
-        ? 'bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 shadow-sm'
+        ? 'bg-white/80 backdrop-blur-md shadow-sm'
         : 'bg-transparent';
     }
-    return 'bg-white shadow-sm';
+    return 'bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-sm';
   }, [isHome, scrolled]);
 
   const linkBase = 'px-3 py-2 text-sm font-medium transition-colors';
-  const linkActive = 'text-blue-700';
-  const linkIdle = 'text-slate-700 hover:text-blue-700';
+  const linkActive = 'text-[var(--brand-700)]';
+  const linkIdle = 'text-slate-700 hover:text-[var(--brand-700)]';
 
   return (
     <header className={`sticky top-0 z-50 transition-colors ${wrapperClass}`}>
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        {/* Left: Brand */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className={`text-lg font-semibold ${isHome && !scrolled ? 'text-white drop-shadow' : 'text-slate-900'}`}
-          >
-            Ascenda
-          </Link>
-        </div>
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
+        {/* Brand */}
+        <Link
+          href="/"
+          className={`text-lg font-semibold tracking-tight ${isHome && !scrolled ? 'text-white drop-shadow' : 'text-[var(--ink-900)]'}`}
+        >
+          Ascenda
+        </Link>
 
-        {/* Center/Right: Desktop nav */}
-        <nav className="hidden items-center gap-1 md:flex">
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-2 md:flex">
           {NAV_LINKS.map(({ href, label }) => {
             const active = pathname?.startsWith(href);
             return (
@@ -91,7 +80,7 @@ export default function Header() {
           })}
         </nav>
 
-        {/* Right: Auth (Desktop) */}
+        {/* Right side */}
         <div className="hidden items-center gap-2 md:flex">
           {userName ? (
             <UserMenu name={userName} onLogout={() => handleLogout(setUserName)} />
@@ -99,18 +88,13 @@ export default function Header() {
             <>
               <Link
                 href="/login"
-                className={[
-                  'rounded-md px-4 py-2 text-sm font-medium',
-                  isHome && !scrolled
-                    ? 'text-white/95 ring-1 ring-white/40 hover:bg-white/10'
-                    : 'text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50',
-                ].join(' ')}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
               >
                 Log in
               </Link>
               <Link
                 href="/signup"
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                className="rounded-lg bg-[var(--brand-600)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--brand-700)]"
               >
                 Sign up
               </Link>
@@ -118,7 +102,7 @@ export default function Header() {
           )}
         </div>
 
-        {/* Mobile: hamburger */}
+        {/* Mobile */}
         <button
           aria-label="Open menu"
           onClick={() => setMobileOpen(true)}
@@ -133,15 +117,10 @@ export default function Header() {
         </button>
       </div>
 
-      {/* Mobile sheet */}
+      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="md:hidden">
-          {/* backdrop */}
-          <div
-            className="fixed inset-0 z-40 bg-black/40"
-            onClick={() => setMobileOpen(false)}
-          />
-          {/* panel */}
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setMobileOpen(false)} />
           <div className="fixed inset-y-0 right-0 z-50 w-80 max-w-[85vw] bg-white shadow-xl">
             <div className="flex items-center justify-between px-4 py-4">
               <Link href="/" onClick={() => setMobileOpen(false)} className="text-base font-semibold">
@@ -169,7 +148,7 @@ export default function Header() {
                       onClick={() => setMobileOpen(false)}
                       className={[
                         'block rounded-md px-3 py-2 text-sm font-medium',
-                        active ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50',
+                        active ? 'bg-[var(--brand-50)] text-[var(--brand-700)]' : 'text-slate-700 hover:bg-slate-50',
                       ].join(' ')}
                     >
                       {label}
@@ -197,18 +176,12 @@ export default function Header() {
                   </div>
                 ) : (
                   <div className="flex gap-2">
-                    <Link
-                      href="/login"
-                      onClick={() => setMobileOpen(false)}
-                      className="flex-1 rounded-md border border-slate-200 px-4 py-2 text-center text-sm font-medium hover:bg-slate-50"
-                    >
+                    <Link href="/login" onClick={() => setMobileOpen(false)}
+                      className="flex-1 rounded-md border border-slate-200 px-4 py-2 text-center text-sm font-medium hover:bg-slate-50">
                       Log in
                     </Link>
-                    <Link
-                      href="/signup"
-                      onClick={() => setMobileOpen(false)}
-                      className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
-                    >
+                    <Link href="/signup" onClick={() => setMobileOpen(false)}
+                      className="flex-1 rounded-md bg-[var(--brand-600)] px-4 py-2 text-center text-sm font-medium text-white hover:bg-[var(--brand-700)]">
                       Sign up
                     </Link>
                   </div>
@@ -227,8 +200,8 @@ function UserMenu({ name, onLogout }: { name: string; onLogout: () => void }) {
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-2 py-1 hover:bg-white"
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-2 py-1 hover:bg-white"
       >
         <Avatar name={name} />
         <span className="text-sm text-slate-800">{name}</span>
@@ -238,16 +211,9 @@ function UserMenu({ name, onLogout }: { name: string; onLogout: () => void }) {
       </button>
 
       {open && (
-        <div
-          className="absolute right-0 mt-2 w-44 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg"
-          onMouseLeave={() => setOpen(false)}
-        >
-          <Link href="/account" className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-            Account
-          </Link>
-          <Link href="/bookings" className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-            My bookings
-          </Link>
+        <div className="absolute right-0 mt-2 w-44 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
+          <Link href="/account" className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Account</Link>
+          <Link href="/bookings" className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">My bookings</Link>
           <button
             onClick={() => { onLogout(); setOpen(false); }}
             className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
@@ -261,24 +227,11 @@ function UserMenu({ name, onLogout }: { name: string; onLogout: () => void }) {
 }
 
 function Avatar({ name }: { name: string }) {
-  const initials = (name || 'A')
-    .split(' ')
-    .map((s) => s[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  const initials = (name || 'A').split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase();
   return (
-    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand-600)] text-xs font-bold text-white">
       {initials}
     </div>
   );
 }
-
-function handleLogout(setUserName: (v: string | null) => void) {
-  try {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-  } finally {
-    setUserName(null);
-  }
-}
+function handleLogout(setUserName:(v:string|null)=>void){ localStorage.removeItem('authToken'); localStorage.removeItem('user'); setUserName(null); }

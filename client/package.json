@@ -2,7 +2,9 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": ">=18.18" },  
+  "engines": {
+    "node": ">=18.18"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -13,6 +15,7 @@
   "dependencies": {
     "@stripe/react-stripe-js": "^3.9.0",
     "@stripe/stripe-js": "^7.8.0",
+    "clsx": "^2.1.1",
     "lucide-react": "^0.536.0",
     "next": "15.3.4",
     "react": "^19.0.0",

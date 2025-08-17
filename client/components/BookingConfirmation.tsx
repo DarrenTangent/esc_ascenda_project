@@ -357,7 +357,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE_URL =
+  (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001/api').replace(/\/$/, '');
 
 interface BookingInfo {
   bookingId: string;
@@ -365,7 +366,7 @@ interface BookingInfo {
   checkIn: string;
   checkOut: string;
   guests: string;
-  rooms: string;
+  rooms: string | number;
   totalPrice: number;
   nights: number;
   firstName: string;
@@ -379,6 +380,7 @@ interface BookingInfo {
 export default function BookingConfirmation() {
   const searchParams = useSearchParams();
   const router = useRouter();
+
 
   const [booking, setBooking] = useState<BookingInfo | null>(null);
   const [loading, setLoading] = useState(true);
