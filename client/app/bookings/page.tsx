@@ -96,7 +96,7 @@ export default function BookingsPage() {
   if (loading) {
     return (
       <main className="mx-auto max-w-5xl px-6 py-12">
-        <h1 className="mb-6 text-4xl font-bold tracking-tight">My bookings</h1>
+        <h1 className="mb-6 text-4xl font-bold tracking-tight">My Bookings</h1>
         <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
           <div className="h-5 w-40 animate-pulse rounded bg-neutral-200" />
           <div className="mt-3 h-24 animate-pulse rounded-lg bg-neutral-100" />
@@ -108,7 +108,7 @@ export default function BookingsPage() {
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
       <div className="mb-8 flex items-end justify-between">
-        <h1 className="text-4xl font-bold tracking-tight">My bookings</h1>
+        <h1 className="text-4xl font-bold tracking-tight">My Bookings</h1>
         <button
           onClick={() => router.push('/')}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"

@@ -104,7 +104,7 @@ export default function AccountPage() {
             href="/bookings"
             className="rounded-lg border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
           >
-            My bookings
+            My Bookings
           </Link>
 
           {user ? (
