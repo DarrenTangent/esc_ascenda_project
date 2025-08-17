@@ -17,4 +17,4 @@ userSchema.methods.toSafeJSON = function () {
   };
 };
 
-export default mongoose.model('User', userSchema);
+export default mongoose.model('HotelUser', userSchema);
