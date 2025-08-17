@@ -11,7 +11,7 @@ jest.mock('next/navigation', () => ({
 
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 
-// Import your actual booking form component (adjust path if needed)
+// The page that renders your BookingForm
 import BookingForm from '../app/booking/[id]/page';
 
 // Helpers
@@ -20,24 +20,19 @@ const makeSearchParams = (map: Record<string, string | null>) => ({
   get: (k: string) => (k in map ? map[k] : null),
 });
 
-// Helper: fill by label; if label isn’t found (e.g., custom UI),
-// fall back to input/textarea/select by name.
+// Fill by label; if label isn’t found, fall back to name
 function fillByLabelOrName(label: RegExp, name: string, value: string) {
   const labeled = screen.queryByLabelText(label);
   if (labeled) {
     fireEvent.change(labeled, { target: { value } });
     return;
   }
-
-  const el =
-    document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
-      `input[name="${name}"], textarea[name="${name}"], select[name="${name}"]`
-    );
-
+  const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+    `input[name="${name}"], textarea[name="${name}"], select[name="${name}"]`
+  );
   if (!el) throw new Error(`Could not find input for ${name}`);
   fireEvent.change(el, { target: { value } });
 }
-
 
 describe('BookingForm', () => {
   beforeEach(() => {
@@ -52,12 +47,16 @@ describe('BookingForm', () => {
         checkout: '2025-08-30',
         guests: '2',
         rooms: '1',
-        room_desc: 'Family Room, Window', // simulate passing description
+        room_desc: 'Family Room, Window', // description passed from hotel page
+        // room_price can be omitted; component will fall back to fetched price
       })
     );
 
     // Reset fetch mock
     global.fetch = jest.fn();
+    // silence jsdom alert error logs in failure test
+    // @ts-ignore
+    window.alert = jest.fn();
   });
 
   test('renders booking summary after hotel + price load', async () => {
@@ -84,13 +83,12 @@ describe('BookingForm', () => {
 
     render(<BookingForm />);
 
-    // Wait for summary (ensures async state updates finished)
     expect(await screen.findByText(/Booking Summary/i)).toBeInTheDocument();
     expect(screen.getByText(/Test Hotel/i)).toBeInTheDocument();
     expect(screen.getByText(/Total:/i)).toBeInTheDocument();
   });
 
-  test('submits booking, posts roomDescription, and calls Stripe session', async () => {
+  test('submits: sends bookingDraft to Stripe session endpoint', async () => {
     // 1) GET hotel details
     (global.fetch as jest.Mock)
       .mockResolvedValueOnce({
@@ -110,12 +108,7 @@ describe('BookingForm', () => {
           rooms: [{ roomDescription: 'Family Room, Window', price: 150 }],
         }),
       })
-      // 3) POST /api/bookings -> returns booking id
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ booking: { _id: 'bkg_1' } }),
-      })
-      // 4) POST /api/payments/create-checkout-session -> returns stripe URL
+      // 3) POST /api/payments/create-checkout-session -> returns stripe URL
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ url: 'https://stripe.test/session/xyz' }),
@@ -126,39 +119,42 @@ describe('BookingForm', () => {
     // Wait for form button to appear before typing
     await screen.findByRole('button', { name: /Book Now/i });
 
-    // Fill minimal form fields (by label or fallback to name)
+    // Fill only the fields that exist in the form
     fillByLabelOrName(/First Name/i, 'firstName', 'John');
     fillByLabelOrName(/Last Name/i, 'lastName', 'Doe');
     fillByLabelOrName(/Email/i, 'email', 'john@example.com');
     fillByLabelOrName(/Phone/i, 'phone', '12345678');
     fillByLabelOrName(/Special Requests/i, 'specialRequests', 'N/A');
-    fillByLabelOrName(/Card Number/i, 'cardNumber', '4111111111111111');
-    fillByLabelOrName(/Expiry/i, 'expiry', '12/25');
-    fillByLabelOrName(/CVV/i, 'cvv', '123');
-    fillByLabelOrName(/Billing Address/i, 'billingAddress', '8 Somapah');
 
-    // Click submit
+    // Submit
     fireEvent.click(screen.getByRole('button', { name: /Book Now/i }));
 
-    // Expect the 3rd fetch to be /api/bookings and include roomDescription
+    // Expect 3 calls in total (hotel, price, stripe session)
     await waitFor(() => {
-      expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(3);
+      expect((global.fetch as jest.Mock).mock.calls.length).toBe(3);
     });
 
-    const postBookingCall = (global.fetch as jest.Mock).mock.calls[2]; // 0: hotel, 1: price, 2: bookings
-    expect(postBookingCall[0]).toMatch(/\/api\/bookings$/);
-    const postedBody = JSON.parse(postBookingCall[1].body);
-    expect(postedBody.roomDescription).toBe('Family Room, Window');
-
-    // Expect Stripe session call (4th call)
-    const stripeCall = (global.fetch as jest.Mock).mock.calls[3];
+    const stripeCall = (global.fetch as jest.Mock).mock.calls[2];
     expect(stripeCall[0]).toMatch(/\/api\/payments\/create-checkout-session$/);
 
-    // (Optional) also assert the returned URL shape
-    const stripeRes = await (global.fetch as jest.Mock).mock.results[3].value;
-    expect((await stripeRes.json()).url).toBe('https://stripe.test/session/xyz');
+    const postedBody = JSON.parse(stripeCall[1].body);
+    expect(postedBody).toEqual(
+      expect.objectContaining({
+        amount: expect.any(Number),
+        email: 'john@example.com',
+        hotelName: 'Test Hotel',
+      })
+    );
+    // bookingDraft is included now
+    expect(postedBody.bookingDraft).toEqual(
+      expect.objectContaining({
+        roomDescription: 'Family Room, Window',
+      })
+    );
 
-    // NOTE: We intentionally do NOT assert `window.location.href` here to avoid jsdom nav issues.
+    // Optional: also assert the returned URL shape
+    const stripeRes = await (global.fetch as jest.Mock).mock.results[2].value;
+    expect((await stripeRes.json()).url).toBe('https://stripe.test/session/xyz');
   });
 
   test('handles Stripe creation failure gracefully', async () => {
@@ -180,28 +176,19 @@ describe('BookingForm', () => {
           rooms: [{ roomDescription: 'X', price: 200 }],
         }),
       })
-      // bookings
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ booking: { _id: 'bkg_1' } }),
-      })
       // stripe (fail)
       .mockResolvedValueOnce({ ok: false, text: async () => 'bad' });
 
-    // mock alert
-    window.alert = jest.fn();
-
     render(<BookingForm />);
 
-    // Wait for form to be ready
+    // Wait for form
     await screen.findByRole('button', { name: /Book Now/i });
 
-    // Fill a couple required fields
+    // Fill minimal required fields
     fillByLabelOrName(/First Name/i, 'firstName', 'J');
     fillByLabelOrName(/Last Name/i, 'lastName', 'D');
     fillByLabelOrName(/Email/i, 'email', 'j@d.com');
     fillByLabelOrName(/Phone/i, 'phone', '1');
-    fillByLabelOrName(/Billing Address/i, 'billingAddress', 'Addr');
 
     fireEvent.click(screen.getByRole('button', { name: /Book Now/i }));
 

@@ -1,36 +1,38 @@
 // server/models/Booking.js
 const mongoose = require('mongoose');
 
-const BookingSchema = new mongoose.Schema({
-  // Guest
-  firstName: { type: String, required: true, trim: true },
-  lastName:  { type: String, required: true, trim: true },
-  email:     { type: String, required: true, match: /\S+@\S+\.\S+/ },
-  phone:     { type: String, required: true },
-  specialRequests: String,
-  billingAddress: { type: String, required: true },
+const BookingSchema = new mongoose.Schema(
+  {
+    // Guest
+    firstName: { type: String, required: true, trim: true },
+    lastName:  { type: String, required: true, trim: true },
+    email:     { type: String, required: true, match: /\S+@\S+\.\S+/ },
+    phone:     { type: String, required: true },
+    specialRequests: String,
+    // billingAddress: { type: String, required: true }, // removed
 
-  // Hotel / stay
-  hotelId: String,
-  hotelName: String,
-  hotelAddress: String,
-  checkIn: { type: Date },
-  checkOut: { type: Date },
-  nights: Number,
-  guests: String,     // UI passes "2|2" etc; keep as string
-  rooms: String,      // keep as string to match existing UI
-  totalPrice: Number,
-  roomDescription: { type: String, required: false },
+    // Hotel / stay
+    hotelId: String,
+    hotelName: { type: String, required: true },
+    hotelAddress: String,
+    checkIn:  { type: Date, required: true },
+    checkOut: { type: Date, required: true },
+    nights:   { type: Number, required: true },
+    guests:   { type: String, required: true },
+    rooms:    { type: String, required: true },
+    totalPrice: { type: Number, required: true },
+    roomDescription: { type: String },
 
-  // Account linkage (optional; used by /bookings/mine and /bookings/by-account)
-  accountUserId: { type: String, default: null },
-  accountEmail:  { type: String, default: null },
+    // Payment (Stripe meta only)
+    paymentIntentId: String,
+    cardLast4: String,
+    cardBrand: String,
 
-  // Payment (no raw card fields)
-  paymentIntentId: String,
-  cardLast4: String,
-  cardBrand: String,
-  paid: { type: Boolean, default: false },
-}, { timestamps: true });
+    // Status
+    status: { type: String, enum: ['Confirmed', 'Cancelled'], default: 'Confirmed' },
+    paid: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model('Booking', BookingSchema);

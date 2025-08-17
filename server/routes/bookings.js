@@ -1,123 +1,94 @@
-// server/routes/bookings.js
+
+
+
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
+
 const Booking = require('../models/Booking');
 const { sendBookingConfirmation } = require('../services/emailService');
 
-/**
- * POST /api/bookings
- */
+// CREATE BOOKING
 router.post('/', async (req, res) => {
   try {
     if (!req.is('application/json')) {
       return res.status(415).json({ error: 'Only JSON requests are supported' });
     }
-
-    const sqlLike =
-      /('|--|;|\/\*|\*\/|\bor\s*1\s*=\s*1\b|\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE|EXEC)\b)/i;
-    for (const [, v] of Object.entries(req.body || {})) {
-      if (typeof v === 'string' && sqlLike.test(v)) {
-        return res.status(400).json({ error: 'Invalid characters detected' });
-      }
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ error: 'Database not connected' });
     }
 
     const {
-      cardNumber,
-      expiry,
-      cvv,
-
-      paymentIntentId,
-      cardBrand,
-
+      firstName, lastName, email, phone, specialRequests,
+      hotelId, hotelName, hotelAddress,
+      checkIn, checkOut, nights, guests, rooms, totalPrice,
       roomDescription,
-
-      accountUserId,
-      accountEmail,
-
-      ...rest
     } = req.body || {};
 
-    const cardLast4 =
-      typeof cardNumber === 'string'
-        ? cardNumber.replace(/[\s-]/g, '').slice(-4)
-        : undefined;
+    const required = { firstName, lastName, email, phone, hotelName, checkIn, checkOut, nights, guests, rooms, totalPrice };
+    for (const k of Object.keys(required)) {
+      const v = required[k];
+      if (v === undefined || v === null || v === '') {
+        return res.status(400).json({ error: `Missing required field: ${k}` });
+      }
+    }
+
+    const ci = new Date(checkIn);
+    const co = new Date(checkOut);
+    if (Number.isNaN(ci.getTime()) || Number.isNaN(co.getTime())) {
+      return res.status(400).json({ error: 'Invalid check-in/check-out dates' });
+    }
 
     const booking = new Booking({
-      ...rest,
-      hotelName: rest.hotelName,
-      hotelAddress: rest.hotelAddress,
-      checkIn: rest.checkIn ? new Date(rest.checkIn) : null,
-      checkOut: rest.checkOut ? new Date(rest.checkOut) : null,
-      nights: rest.nights,
-      totalPrice: rest.totalPrice,
-      paymentIntentId: paymentIntentId || null,
-      cardBrand: cardBrand || null,
-      cardLast4: cardLast4 || null,
-      paid: !!paymentIntentId,
-      roomDescription: roomDescription || null,
-      accountUserId: accountUserId || null,
-      accountEmail: accountEmail || null,
+      firstName, lastName, email, phone, specialRequests,
+      hotelId, hotelName, hotelAddress,
+      checkIn: ci, checkOut: co,
+      nights, guests, rooms, totalPrice,
+      roomDescription,
+      // status defaults in schema; you set it to "Confirmed"
     });
 
-    await booking.validate();
     await booking.save();
 
-    const frontendBaseUrl =
-      process.env.FRONTEND_BASE_URL || 'http://localhost:3000';
+    const frontendBaseUrl = process.env.FRONTEND_BASE_URL || process.env.CLIENT_URL || 'http://localhost:3000';
     const confirmationUrl = `${frontendBaseUrl}/booking/confirmation?bookingId=${booking._id}`;
-
     sendBookingConfirmation(booking.email, booking, confirmationUrl).catch(() => {});
 
-    return res.status(201).json({ message: 'Booking created', booking });
+    return res.status(201).json({ message: 'Booking created', bookingId: booking._id, booking });
   } catch (err) {
-    if (err && err.name === 'ValidationError') {
-      return res.status(400).json({ error: 'Validation failed' });
-    }
     console.error('Create booking error:', err);
-    return res.status(500).json({ error: 'Failed to save booking' });
+    const status = err?.name === 'ValidationError' ? 400 : 500;
+    return res.status(status).json({ error: err?.message || 'Failed to save booking' });
   }
 });
 
-/**
- * GET /api/bookings/by-account?userId=...&email=...
- * NOTE: must come BEFORE '/:id'
- */
-router.get('/by-account', async (req, res) => {
-  try {
-    const { userId, email } = req.query;
-
-    if (!userId && !email) {
-      return res.status(400).json({ error: 'userId or email required' });
-    }
-
-    const q = {};
-    if (userId) q.accountUserId = String(userId);
-    if (email) q.accountEmail = String(email);
-
-    const bookings = await Booking.find(q).sort({ createdAt: -1 }).lean();
-
-    return res.json({ bookings });
-  } catch (err) {
-    console.error('Error fetching bookings by account:', err);
-    return res.status(500).json({ error: 'Failed to load bookings' });
-  }
-});
-
-/**
- * GET /api/bookings/:id
- * (Place AFTER /by-account)
- */
+// GET BOOKING BY ID
 router.get('/:id', async (req, res) => {
   try {
-    const id = String(req.params.id);
-    const booking = await Booking.findById(id).lean();
-    if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
-    }
-    return res.json(booking);
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    res.json(booking);
   } catch (err) {
     console.error('Error fetching booking:', err);
-    return res.status(500).json({ error: 'Server error, please try again later' });
+    res.status(500).json({ error: 'Server error, please try again later' });
+  }
+});
+
+// CANCEL BOOKING -> HARD DELETE
+router.post('/:id/cancel', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ error: 'Database not connected' });
+    }
+    const id = req.params.id;
+    const existing = await Booking.findById(id);
+    if (!existing) return res.status(404).json({ error: 'Booking not found' });
+
+    await Booking.deleteOne({ _id: id });
+    return res.json({ ok: true, deleted: true });
+  } catch (e) {
+    console.error('Cancel/Delete booking error:', e);
+    return res.status(500).json({ error: 'Failed to cancel booking' });
   }
 });
 
